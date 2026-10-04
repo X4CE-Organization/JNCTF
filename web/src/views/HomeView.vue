@@ -5,6 +5,7 @@ import { NSpin } from 'naive-ui';
 import { api } from '../api';
 import { useAuthStore } from '../stores/auth';
 import ChallengeCard from '../components/ChallengeCard.vue';
+import MarkdownView from '../components/MarkdownView.vue';
 
 const auth = useAuthStore();
 const loading = ref(true);
@@ -12,6 +13,22 @@ const stats = ref({ users: 0, teams: 0, challenges: 0, solves: 0, competitions: 
 const challenges = ref<any[]>([]);
 const competitions = ref<any[]>([]);
 const bloods = ref<any[]>([]);
+const announcements = ref<any[]>([]);
+const expandedAnn = ref<Set<number>>(new Set());
+
+const LEVEL_LABEL: Record<string, string> = { INFO: 'NOTICE', WARNING: 'WARN', IMPORTANT: 'IMPORTANT' };
+const LEVEL_COLOR: Record<string, string> = {
+  INFO: 'var(--jk-text-2)',
+  WARNING: 'var(--jk-amber)',
+  IMPORTANT: 'var(--jk-danger)',
+};
+
+function toggleAnn(id: number) {
+  const next = new Set(expandedAnn.value);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  expandedAnn.value = next;
+}
 
 const STATE: Record<string, { text: string; color: string }> = {
   UPCOMING: { text: '即将开始', color: '#3ba0ff' },
@@ -32,6 +49,10 @@ onMounted(async () => {
     challenges.value = c.items ?? [];
     competitions.value = comp.items ?? [];
     bloods.value = b.items ?? [];
+    announcements.value = await api
+      .get<any>('/api/site/announcements?size=20')
+      .then((d) => d.items ?? [])
+      .catch(() => []);
   } finally {
     loading.value = false;
   }
@@ -68,28 +89,23 @@ onMounted(async () => {
       </section>
 
       <!-- 公告 -->
-      <section v-if="auth.meta?.announcements?.length" class="jk-panel">
-        <div class="jk-section">
-          <h2>公告</h2>
-          <RouterLink to="/announcements" class="more">全部 →</RouterLink>
-        </div>
-        <div v-for="item in auth.meta.announcements.slice(0, 3)" :key="item.id" class="jk-list-item" style="align-items: flex-start">
-          <span
-            class="jk-chip"
-            :style="{
-              color: item.level === 'IMPORTANT' ? '#ff4d6d' : item.level === 'WARNING' ? '#ffb020' : 'var(--jk-text-2)',
-              borderColor: item.level === 'IMPORTANT' ? 'rgba(255,77,109,.4)' : item.level === 'WARNING' ? 'rgba(255,176,32,.4)' : 'var(--jk-border)',
-            }"
-          >
-            {{ item.pinned ? 'PIN' : item.level === 'IMPORTANT' ? 'IMPORTANT' : item.level === 'WARNING' ? 'WARN' : 'NOTICE' }}
-          </span>
-          <div style="min-width: 0; flex: 1">
-            <div style="font-weight: 600; font-size: 14px">{{ item.title }}</div>
-            <div style="font-size: 13px; color: var(--jk-muted); margin-top: 2px">{{ item.content.slice(0, 120) }}</div>
+      <section v-if="announcements.length" class="jk-panel">
+        <div class="jk-section"><h2>公告</h2><span class="count">{{ announcements.length }}</span></div>
+        <div v-for="item in announcements" :key="item.id" class="ann-item">
+          <div class="ann-head" @click="toggleAnn(Number(item.id))">
+            <span
+              class="jk-chip"
+              :style="{ color: LEVEL_COLOR[item.level] ?? 'var(--jk-text-2)', borderColor: 'var(--jk-border-strong)' }"
+            >
+              {{ item.pinned ? 'PIN' : LEVEL_LABEL[item.level] ?? 'NOTICE' }}
+            </span>
+            <h3>{{ item.title }}</h3>
+            <span class="mono ann-date">{{ new Date(item.publishedAt).toLocaleDateString() }}</span>
+            <span class="ann-toggle">{{ expandedAnn.has(Number(item.id)) ? '收起' : '展开' }}</span>
           </div>
-          <span class="mono" style="font-size: 11px; color: var(--jk-muted); flex: none">
-            {{ new Date(item.publishedAt).toLocaleDateString() }}
-          </span>
+          <div v-if="expandedAnn.has(Number(item.id))" class="ann-body">
+            <MarkdownView :content="item.content" />
+          </div>
         </div>
       </section>
 

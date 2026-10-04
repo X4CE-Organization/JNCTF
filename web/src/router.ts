@@ -7,7 +7,6 @@ const routes = [
   { path: '/challenges/:id', name: 'challenge-detail', component: () => import('./views/ChallengeDetailView.vue') },
   { path: '/submissions', name: 'submissions', component: () => import('./views/SubmissionsView.vue') },
   { path: '/scoreboard', name: 'scoreboard', component: () => import('./views/ScoreboardView.vue') },
-  { path: '/announcements', name: 'announcements', component: () => import('./views/AnnouncementsView.vue') },
   { path: '/competitions', name: 'competitions', component: () => import('./views/CompetitionListView.vue') },
   { path: '/competitions/:id', name: 'competition-detail', component: () => import('./views/CompetitionDetailView.vue') },
   { path: '/competitions/:id/awd', name: 'awd', component: () => import('./views/AwdView.vue') },

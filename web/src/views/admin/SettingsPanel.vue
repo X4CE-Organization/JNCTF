@@ -128,14 +128,14 @@ onMounted(load);
       <template #header-extra>
         <n-button size="tiny" @click="resetGroup(group)">恢复默认</n-button>
       </template>
-      <div class="divide-y divide-dashed">
-        <div v-for="field in group.fields" :key="field.key" class="flex flex-wrap items-center gap-4 py-3">
-          <div class="min-w-0 flex-1">
-            <div class="text-sm font-medium">{{ field.label }}</div>
-            <div v-if="field.hint" class="text-xs opacity-50">{{ field.hint }}</div>
-            <code class="text-[10px] opacity-40">{{ field.key }}</code>
+      <div class="settings-list">
+        <div v-for="field in group.fields" :key="field.key" class="setting-row">
+          <div class="setting-label">
+            <strong>{{ field.label }}</strong>
+            <small v-if="field.hint">{{ field.hint }}</small>
+            <code class="setting-key">{{ field.key }}</code>
           </div>
-          <div class="w-full sm:w-72">
+          <div class="setting-control">
             <n-switch
               v-if="field.type === 'bool'"
               :value="current(field.key) === 'true'"

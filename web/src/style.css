@@ -1187,11 +1187,22 @@ body {
   gap: 12px 18px;
   align-items: start;
   padding: 14px 0;
-  border-bottom: 1px dashed var(--jk-border);
+  border-bottom: 1px solid var(--jk-border);
 }
 
 .setting-row:last-child {
   border-bottom: 0;
+}
+
+.settings-list .setting-row:first-child {
+  padding-top: 4px;
+}
+
+.setting-key {
+  font-family: var(--jk-mono);
+  font-size: 10.5px;
+  color: var(--jk-muted);
+  opacity: 0.7;
 }
 
 .setting-label {
@@ -1378,6 +1389,16 @@ body {
   align-items: center;
   gap: 12px;
   cursor: pointer;
+}
+
+.ann-item {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--jk-border);
+}
+
+.ann-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .ann-head h3 {

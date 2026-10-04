@@ -19,11 +19,10 @@ const mobileOpen = ref(false);
 
 const NAV = [
   { to: '/challenges', label: '题目' },
-  { to: '/submissions', label: '提交' },
   { to: '/competitions', label: '比赛' },
   { to: '/scoreboard', label: '榜单' },
   { to: '/teams', label: '团队' },
-  { to: '/announcements', label: '公告' },
+  { to: '/submissions', label: '提交' },
 ];
 
 const userOptions = computed(() => [
