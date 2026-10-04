@@ -1,0 +1,82 @@
+# ---------------------------------------------------------------------------
+# JNCTF 一键部署：Node 后端 + PostgreSQL + Redis
+# 需要动态靶机（AWD / 每题一份容器）时，把 docker.sock 挂给后端即可。
+# ---------------------------------------------------------------------------
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: jnctf-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-jnctf}
+      POSTGRES_USER: ${POSTGRES_USER:-jnctf}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jnctf-change-me}
+    volumes:
+      - jnctf-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-jnctf} -d ${POSTGRES_DB:-jnctf}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: jnctf-redis
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - jnctf-redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  jnctf:
+    build:
+      context: .
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
+    image: jnctf:latest
+    container_name: jnctf
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '${PORT:-8080}:8080'
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      SITE_URL: ${SITE_URL:-http://localhost:8080}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-jnctf}:${POSTGRES_PASSWORD:-jnctf-change-me}@db:5432/${POSTGRES_DB:-jnctf}?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # 生产环境务必换掉：openssl rand -base64 48
+      JWT_SECRET: ${JWT_SECRET:-please-change-this-to-a-long-random-string}
+      UPLOAD_DIR: /app/data/uploads
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-100}
+      ROOT_USERNAME: ${ROOT_USERNAME:-root}
+      ROOT_PASSWORD: ${ROOT_PASSWORD:-jnctf123456}
+      ROOT_EMAIL: ${ROOT_EMAIL:-root@jnctf.local}
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-25}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-JNCTF <no-reply@localhost>}
+      # 动态靶机：打开后容器会挂载 docker.sock，请确认你了解其权限含义
+      DOCKER_ENABLED: ${DOCKER_ENABLED:-false}
+      DOCKER_PUBLIC_HOST: ${DOCKER_PUBLIC_HOST:-localhost}
+      DOCKER_PORT_START: ${DOCKER_PORT_START:-30000}
+      DOCKER_PORT_END: ${DOCKER_PORT_END:-31000}
+    volumes:
+      - ./data:/app/data
+      # 需要动态靶机时打开下面这行
+      # - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  jnctf-db:
+  jnctf-redis:

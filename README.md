@@ -1,0 +1,248 @@
+# JNCTF · 开源 CTF 竞赛平台
+
+<div align="center">
+
+**Node 22 + TypeScript + Express + Prisma + PostgreSQL + Redis / Vue 3 + Naive UI**
+
+**当前版本：1.0.0**
+
+</div>
+
+---
+
+## 功能一览
+
+### 题目与判题
+
+| 模块 | 能力 |
+| --- | --- |
+| 题目 | 分类、标签、难度、题面（Markdown）、附件（多文件 + SHA256）、提示（可设分值） |
+| 判题 | 多 flag、静态匹配、正则匹配、每题一份的动态 flag；flag 模板支持 `{random}` `{team}` `{round}` |
+| 计分 | 固定分值与动态分值（平方衰减：解得人越多分越低，到保底分为止） |
+| 加分项 | 一血 / 二血 / 三血按比例加成，可自行设比例 |
+| 提交限制 | 全局最小间隔、单题最大错误次数、比赛时间窗校验 |
+| 动态靶机 | 每队一份独立容器，端口自动分配，内存与 CPU 限额，到期自动回收 |
+
+### 比赛
+
+| 模块 | 能力 |
+| --- | --- |
+| 类型 | 解题赛（Jeopardy）、攻防赛（AWD）、混合赛 |
+| 参赛 | 个人 / 团队 / 两者皆可，可设队伍人数上下限、报名口令、人数上限、审核制 |
+| 时间轴 | 开赛前隐藏题目、封榜（普通选手只看到封榜时刻的排名）、赛后并入练习题库 |
+| 榜单 | 个人榜与团队榜（同队同题去重），同分按最后解出时间排序，带解题时间线 |
+| 公告 | 比赛内公告，发布时自动通知全部参赛者 |
+
+### AWD 攻防
+
+| 模块 | 能力 |
+| --- | --- |
+| 回合 | 按比赛时长自动切分回合，也可手动触发推进 |
+| 靶机 | 开赛时为每队每个服务起一台容器，回合之间只轮换 flag 不重建容器 |
+| flag | 每回合为每台靶机生成新 flag 并写进容器（环境变量 / 文件），旧 flag 立即作废 |
+| 攻击 | 提交别队 flag 得分，被攻破方扣分；同一靶机一回合只能拿一次分 |
+| 检查 | 内置 checker 检查服务可用性（HTTP 或 TCP 探测），掉线扣分并累计失败次数 |
+| 榜单 | 攻击得分、防守扣分、存活服务数、攻破与被攻破次数 |
+| 记录 | 完整攻防流水与检查记录，靶机可手动重启 |
+
+### 用户与社区
+
+| 模块 | 能力 |
+| --- | --- |
+| 账号 | 注册 / 登录 / 刷新令牌 / 找回密码 / 邮箱验证 / 两步验证（TOTP） |
+| 角色 | 普通用户、普通管理员、超级管理员三级权限 |
+| 团队 | 创建、改名、邀请码加入、踢人、退出；队长退出自动移交，最后一人退出自动解散；比赛期间可锁定 |
+| 个人主页 | 资料、积分排名、解题记录、队伍 |
+| 题解 | 投稿（需先解出）、审核、站内阅读或外链、点赞与浏览量 |
+| 工单 | 分类、优先级、状态流转、管理员内部备注、回复通知 |
+| 通知 | 站内信、未读红点、按类型过滤 |
+| API 令牌 | 给脚本 / CI 用，明文只返回一次，可随时吊销 |
+| 积分流水 | 每次加减分都有记录，可查明细 |
+
+### 管理后台
+
+控制台总览、用户管理（角色 / 封禁 / 改密 / 删除）、题目管理（含 flag、提示、附件、动态靶机配置）、
+比赛管理、AWD 服务管理、题解审核、工单处理、公告管理、操作日志与登录日志、系统运行状态、站点设置。
+
+---
+
+## 快速部署
+
+### 方式一：Docker Compose（推荐）
+
+```bash
+git clone https://github.com/x4ce-organization/JNCTF.git
+cd JNCTF
+cp .env.example .env      # 按需修改数据库密码与 JWT_SECRET
+docker compose up -d --build
+```
+
+打开 `http://localhost:8080`，用 `.env` 里的 `ROOT_USERNAME` / `ROOT_PASSWORD` 登录
+（默认 `root` / `jnctf123456`，**登录后请立刻改密码**）。
+
+容器启动时会自动执行数据库迁移，首次运行自动创建超级管理员与 8 个题目分类。
+
+### 方式二：本地开发
+
+需要 Node 20+、PostgreSQL 14+、Redis 6+。
+
+```bash
+# 1. 准备数据库
+createdb jnctf
+
+# 2. 后端
+cd server
+npm install
+cp ../.env.example .env        # 至少改 DATABASE_URL
+npx prisma migrate deploy      # 建表
+npm run dev                    # http://localhost:8080
+
+# 3. 前端（另开一个终端）
+cd web
+npm install
+npm run dev                    # http://localhost:5173，已配好到 8080 的代理
+```
+
+生产环境前端构建后由后端托管：
+
+```bash
+cd web && npm run build
+cd ../server && npm run build && npm start
+```
+
+---
+
+## 环境变量
+
+完整列表见 `.env.example`，下面是最常改的几个：
+
+| 变量 | 说明 | 默认 |
+| --- | --- | --- |
+| `DATABASE_URL` | PostgreSQL 连接串 | 本机 jnctf 库 |
+| `REDIS_HOST` / `REDIS_PORT` | Redis 地址（限流、缓存、找回密码令牌） | localhost:6379 |
+| `JWT_SECRET` | 令牌签名密钥，**生产必须换** | 开发用默认值 |
+| `SITE_URL` | 站点对外地址，用于邮件里的链接 | http://localhost:8080 |
+| `ROOT_USERNAME` / `ROOT_PASSWORD` | 首个超级管理员，仅空库时创建 | root / jnctf123456 |
+| `UPLOAD_DIR` | 上传文件目录 | ./data/uploads |
+| `MAX_UPLOAD_MB` | 单个附件大小上限 | 100 |
+| `MAIL_ENABLED` | 是否真的发邮件；关掉时邮件只写日志 | false |
+| `DOCKER_ENABLED` | 是否启用动态靶机 | false |
+
+---
+
+## 动态靶机（可选）
+
+不开启时，把题目勾选「需要动态靶机」也不会报错，只是启动按钮会提示未启用。
+
+开启步骤：
+
+1. 宿主机上装好 Docker
+2. `.env` 里设 `DOCKER_ENABLED=true`、`DOCKER_PUBLIC_HOST=你的公网IP或域名`
+3. `docker-compose.yml` 里打开 `/var/run/docker.sock` 那一行挂载
+4. 后台「系统设置 → 动态靶机」里也打开开关
+
+> ⚠️ 挂载 docker.sock 等于把宿主机的 Docker 控制权交给容器，请只在你能接受这个前提的环境下开启。
+> 更安全的做法是给 JNCTF 单独一台跑靶机的机器，通过 `DOCKER_HOST=tcp://...` 远程连接。
+
+题目侧配置：Docker 镜像、容器端口、内存与 CPU 限额、实例存活时间。
+AWD 服务侧还可以配：flag 环境变量名 / 文件路径、flag 模板、健康检查路径、每回合基础分。
+
+---
+
+## 评分规则说明
+
+**动态分值**用的公式是：
+
+```
+分值 = 最高分 − (最高分 − 最低分) × (解出人数 ÷ 衰减系数)²
+```
+
+「衰减系数」可以理解成「解出多少队之后基本只剩保底分」。解出的人越多分数越低，但不会低于最低分。
+
+**一血加成**默认按比例：一血 +5%、二血 +3%、三血 +1%（可在比赛里单独配置）。
+
+---
+
+## 技术栈
+
+| 层 | 选型 |
+| --- | --- |
+| 后端 | Node 22、TypeScript、Express 5、Prisma 6 |
+| 数据库 | PostgreSQL 16，迁移由 Prisma Migrate 管理 |
+| 缓存 | Redis（分布式限流、缓存、一次性令牌） |
+| 认证 | JWT 双令牌（访问 + 刷新）、bcrypt、TOTP 两步验证 |
+| 靶机 | Docker Engine API（dockerode） |
+| 前端 | Vue 3、TypeScript、Vite、Naive UI、Pinia、Vue Router、ECharts |
+| 部署 | Docker 多阶段构建，单镜像同时托管前端与后端 |
+
+---
+
+## 接口文档
+
+后端启动后访问 `http://localhost:8080/api/site/health` 确认存活。
+所有接口以 `/api` 开头，统一返回：
+
+```json
+{ "success": true, "data": {}, "timestamp": "..." }
+{ "success": false, "error": { "code": "BAD_REQUEST", "message": "..." }, "timestamp": "..." }
+```
+
+认证方式两种：
+
+- 浏览器：`Authorization: Bearer <accessToken>`
+- 脚本：`Authorization: Token <api-token>`
+
+---
+
+## 目录结构
+
+```
+JNCTF/
+├── server/                 # 后端
+│   ├── prisma/
+│   │   ├── schema.prisma   # 数据模型（37 张表）
+│   │   └── migrations/     # 迁移历史，不要手改
+│   └── src/
+│       ├── lib/            # Prisma、Redis、JWT、TOTP、设置、存储、邮件、审计
+│       ├── middleware/     # 认证与权限
+│       ├── routes/         # 全部 REST 接口
+│       ├── services/       # 判题、计分、榜单、AWD 引擎、靶机
+│       └── scheduler.ts    # 定时任务（AWD 回合推进、靶机回收、设置重载）
+├── web/                    # 前端（Vue 3 + Naive UI）
+│   └── src/{views,components,stores}
+├── Dockerfile
+└── docker-compose.yml
+```
+
+---
+
+## 常见问题
+
+**Q：忘记超级管理员密码？**
+```bash
+docker compose exec jnctf node -e "
+const {PrismaClient}=require('@prisma/client');const bcrypt=require('bcryptjs');
+const p=new PrismaClient();
+p.user.update({where:{username:'root'},data:{passwordHash:bcrypt.hashSync('新密码',10)}}).then(()=>process.exit(0));
+"
+```
+
+**Q：比赛结束了但榜单没结算？**
+后台「比赛管理 → 结算」会把选手分数写回参赛记录。
+
+**Q：AWD 的 flag 变了但靶机里没变？**
+检查服务配置里的「flag 文件路径」是否和镜像里的一致；只配了环境变量的话，
+改名对已经在运行的进程不生效，建议两者都配或只配文件。
+
+---
+
+## 许可
+
+AGPL-3.0。**任何商业使用都必须保留指向本仓库的署名与链接**：
+
+- 页脚、关于页面或随附文档中至少有一处明显可见地写着「Powered by JNCTF」，
+  并链接到 <https://github.com/x4ce-organization/JNCTF>
+- 不得移除版权与作者信息
+- 需要去掉署名或闭源分发，请联系仓库作者单独获取许可
+
+Copyright © 2026 X4CE

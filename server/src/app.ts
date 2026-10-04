@@ -17,6 +17,9 @@ import { scoreboardRouter } from './routes/scoreboard.js';
 import { teamRouter } from './routes/teams.js';
 import { competitionRouter } from './routes/competitions.js';
 import { awdRouter } from './routes/awd.js';
+import { adminRouter } from './routes/admin.js';
+import { uploadRouter } from './routes/uploads.js';
+import { notificationRouter, ticketRouter, userRouter, writeupRouter } from './routes/community.js';
 
 export function createApp() {
   const app = express();
@@ -43,6 +46,12 @@ export function createApp() {
   app.use('/api/teams', teamRouter);
   app.use('/api/competitions', competitionRouter);
   app.use('/api/awd', awdRouter);
+  app.use('/api/admin', adminRouter);
+  app.use('/api/upload', uploadRouter);
+  app.use('/api/writeups', writeupRouter);
+  app.use('/api/tickets', ticketRouter);
+  app.use('/api/notifications', notificationRouter);
+  app.use('/api/users', userRouter);
 
   // 前端构建产物（存在时由后端托管）
   const webDist = path.resolve(config.rootDir, '../web/dist');

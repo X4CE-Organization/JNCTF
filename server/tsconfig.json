@@ -5,7 +5,7 @@
     "moduleResolution": "Bundler",
     "lib": ["ES2023"],
     "outDir": "dist",
-    "rootDir": ".",
+    "rootDir": "src",
     "strict": true,
     "noUncheckedIndexedAccess": false,
     "esModuleInterop": true,
@@ -17,6 +17,6 @@
     "declaration": false,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "prisma/**/*.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
