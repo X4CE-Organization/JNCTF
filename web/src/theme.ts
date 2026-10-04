@@ -20,49 +20,104 @@ export const PALETTE = {
   info: '#3ba0ff',
 };
 
-const base: GlobalThemeOverrides = {
-  common: {
-    primaryColor: PALETTE.accent,
-    primaryColorHover: '#3dffbe',
-    primaryColorPressed: '#00c78b',
-    primaryColorSuppl: '#3dffbe',
-    successColor: PALETTE.accent,
-    warningColor: PALETTE.amber,
-    errorColor: PALETTE.danger,
-    infoColor: PALETTE.info,
-    borderRadius: '6px',
-    borderRadiusSmall: '5px',
-    fontSize: '13px',
-    fontWeightStrong: '700',
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
-    fontFamilyMono: 'ui-monospace, "JetBrains Mono", SFMono-Regular, Menlo, Consolas, monospace',
-  },
+const common: GlobalThemeOverrides['common'] = {
+  primaryColor: PALETTE.accent,
+  primaryColorHover: '#3dffbe',
+  primaryColorPressed: '#00c78b',
+  primaryColorSuppl: '#3dffbe',
+  successColor: PALETTE.accent,
+  warningColor: PALETTE.amber,
+  errorColor: PALETTE.danger,
+  infoColor: PALETTE.info,
+  borderRadius: '6px',
+  borderRadiusSmall: '5px',
+  fontSize: '13px',
+  fontWeightStrong: '700',
+  fontFamily:
+    '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
+  fontFamilyMono: 'ui-monospace, "JetBrains Mono", SFMono-Regular, Menlo, Consolas, monospace',
+};
+
+const shared: GlobalThemeOverrides = {
+  common,
   Button: { fontWeight: '600', borderRadiusMedium: '6px', borderRadiusSmall: '5px' },
-  Card: {
-    borderRadius: '8px',
-    color: PALETTE.bgElev,
-    borderColor: PALETTE.border,
-    titleFontWeight: '700',
-  },
-  Input: {
-    borderRadius: '6px',
-    color: PALETTE.bgSoft,
-    colorFocus: PALETTE.bgSoft,
-    border: `1px solid ${PALETTE.border}`,
-    borderFocus: `1px solid ${PALETTE.accent}`,
-  },
   DataTable: { thFontWeight: '600', borderRadius: '8px' },
   Tag: { borderRadius: '4px' },
   Menu: { itemBorderRadius: '6px' },
+  Popover: { borderRadius: '8px' },
+  Dropdown: { borderRadius: '8px' },
+  Tabs: { tabFontWeightActive: '700' },
 };
 
-/** 全站以深色为主 */
-export const darkThemeOverrides: GlobalThemeOverrides = base;
-
+/**
+ * 浅色主题（默认）。输入框、下拉、表格底色都必须是浅色，
+ * 否则会出现「白底页面上顶着黑输入框」这种割裂感。
+ */
 export const themeOverrides: GlobalThemeOverrides = {
-  ...base,
-  Card: { ...base.Card, color: '#ffffff', borderColor: 'rgba(15,23,42,0.1)' },
+  ...shared,
+  common: { ...common, primaryColor: '#00a878', primaryColorPressed: '#008a63', primaryColorSuppl: '#00c78b' },
+  Card: { color: '#ffffff', borderColor: 'rgba(11,15,25,0.1)', borderRadius: '8px' },
+  Input: {
+    color: '#f4f6fa',
+    colorFocus: '#ffffff',
+    border: '1px solid rgba(11,15,25,0.12)',
+    borderHover: '1px solid rgba(11,15,25,0.24)',
+    borderFocus: '1px solid #00a878',
+    textColor: '#0b0f19',
+    placeholderColor: '#7b8399',
+    borderRadius: '6px',
+  },
+  InternalSelection: {
+    color: '#f4f6fa',
+    colorActive: '#f4f6fa',
+    border: '1px solid rgba(11,15,25,0.12)',
+    borderHover: '1px solid rgba(11,15,25,0.24)',
+    borderActive: '1px solid #00a878',
+    borderFocus: '1px solid #00a878',
+    textColor: '#0b0f19',
+    placeholderColor: '#7b8399',
+    borderRadius: '6px',
+  },
+  InternalSelectMenu: { color: '#ffffff', optionTextColor: '#0b0f19', borderRadius: '6px' },
+  InputNumber: { peers: { Input: { color: '#f4f6fa', textColor: '#0b0f19', borderRadius: '6px' } } },
+  Switch: { railColor: 'rgba(11,15,25,0.18)', railColorActive: '#00a878' },
+  Checkbox: { color: '#ffffff', border: '1px solid rgba(11,15,25,0.24)', checkMarkColor: '#04120c' },
+  DataTable: { thColor: '#eceff6', thTextColor: '#454d63', tdColor: '#ffffff', tdColorHover: '#f4f6fa', borderColor: 'rgba(11,15,25,0.08)', thFontWeight: '600', borderRadius: '8px' },
+  Modal: { color: '#ffffff' },
+  Popover: { color: '#ffffff' },
+  Dropdown: { color: '#ffffff', optionTextColor: '#0b0f19' },
+};
+
+/** 深色主题（可切换） */
+export const darkThemeOverrides: GlobalThemeOverrides = {
+  ...shared,
+  Card: { color: PALETTE.bgElev, borderColor: PALETTE.border, borderRadius: '8px' },
+  Input: {
+    color: PALETTE.bgSoft,
+    colorFocus: PALETTE.bgSoft,
+    border: `1px solid ${PALETTE.border}`,
+    borderHover: `1px solid ${PALETTE.borderStrong}`,
+    borderFocus: `1px solid ${PALETTE.accent}`,
+    textColor: PALETTE.text,
+    placeholderColor: PALETTE.muted,
+    borderRadius: '6px',
+  },
+  InternalSelection: {
+    color: PALETTE.bgSoft,
+    colorActive: PALETTE.bgSoft,
+    border: `1px solid ${PALETTE.border}`,
+    borderHover: `1px solid ${PALETTE.borderStrong}`,
+    borderActive: `1px solid ${PALETTE.accent}`,
+    textColor: PALETTE.text,
+    placeholderColor: PALETTE.muted,
+    borderRadius: '6px',
+  },
+  InternalSelectMenu: { color: PALETTE.bgElev, optionTextColor: PALETTE.text, borderRadius: '6px' },
+  InputNumber: { peers: { Input: { color: PALETTE.bgSoft, textColor: PALETTE.text, borderRadius: '6px' } } },
+  DataTable: { thColor: PALETTE.bgSoft, thTextColor: PALETTE.text2, tdColor: PALETTE.bgElev, tdColorHover: PALETTE.bgSoft, borderColor: PALETTE.border, thFontWeight: '600', borderRadius: '8px' },
+  Modal: { color: PALETTE.bgElev },
+  Popover: { color: PALETTE.bgElev },
+  Dropdown: { color: PALETTE.bgElev, optionTextColor: PALETTE.text },
 };
 
 /** 难度配色：绿 → 蓝 → 紫 → 橙 → 红 */

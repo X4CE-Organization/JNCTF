@@ -362,6 +362,57 @@ challengeRouter.get(
 
 export const submissionRouter = Router();
 
+/**
+ * 公开提交记录：任何人都能看，但不返回 flag 内容。
+ * 支持按题目、用户、状态筛选，内部用 all 参数控制是否只看自己。
+ */
+submissionRouter.get(
+  '/public',
+  asyncHandler(async (req, res) => {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const size = Math.min(100, Math.max(1, Number(req.query.size) || 30));
+    const challengeId = req.query.challengeId ? BigInt(String(req.query.challengeId)) : undefined;
+    const userId = req.query.userId ? BigInt(String(req.query.userId)) : undefined;
+    const username = String(req.query.username ?? '').trim();
+    const status = String(req.query.status ?? '').trim();
+
+    const where: any = {};
+    if (challengeId) where.challengeId = challengeId;
+    if (userId) where.userId = userId;
+    if (username) where.user = { username };
+    if (status) where.status = status;
+
+    const [total, rows] = await Promise.all([
+      prisma.submission.count({ where }),
+      prisma.submission.findMany({
+        where,
+        include: {
+          challenge: { select: { id: true, title: true } },
+          user: { select: { id: true, username: true, displayName: true, avatar: true } },
+        },
+        orderBy: { id: 'desc' },
+        skip: (page - 1) * size,
+        take: size,
+      }),
+    ]);
+    return ok(res, {
+      items: rows.map((s) => ({
+        id: s.id,
+        challengeId: s.challengeId,
+        challengeTitle: s.challenge.title,
+        status: s.status,
+        score: s.score,
+        user: { id: s.user.id, username: s.user.username, displayName: s.user.displayName || s.user.username, avatar: s.user.avatar },
+        createdAt: s.createdAt,
+      })),
+      total,
+      page,
+      size,
+      totalPages: Math.ceil(total / size),
+    });
+  }),
+);
+
 submissionRouter.get(
   '/',
   asyncHandler(async (req, res) => {

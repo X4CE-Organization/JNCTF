@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
 import { NCard, NTag, NSpin, NList, NListItem, NThing, NEmpty, NDescriptions, NDescriptionsItem, NSpace, NAvatar } from 'naive-ui';
-import { RouterLink, useRoute } from 'vue-router';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { DIFFICULTY_META } from '../theme';
 
 const route = useRoute();
+const router = useRouter();
 const loading = ref(true);
 const profile = ref<any>(null);
 
@@ -24,7 +25,9 @@ onMounted(load);
 
 <template>
   <n-spin :show="loading">
-    <div v-if="profile" class="grid gap-4 lg:grid-cols-[280px_1fr]">
+    <div v-if="profile" class="profile-page">
+      <button class="back-btn" title="返回上一页" @click="router.back()">←</button>
+      <div class="grid gap-4 lg:grid-cols-[280px_1fr]">
       <n-card>
         <div class="text-center">
           <n-avatar round :size="72" :src="profile.avatar || undefined">{{ profile.displayName.slice(0, 1) }}</n-avatar>
@@ -70,6 +73,7 @@ onMounted(load);
           </n-list-item>
         </n-list>
       </n-card>
+      </div>
     </div>
   </n-spin>
 </template>

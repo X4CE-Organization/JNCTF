@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
 import { NCard, NSpin, NTag, NSpace, NButton, NEllipsis, useMessage } from 'naive-ui';
-import { RouterLink, useRoute } from 'vue-router';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import MarkdownView from '../components/MarkdownView.vue';
 
 const route = useRoute();
+const router = useRouter();
 const message = useMessage();
 const loading = ref(true);
 const writeup = ref<any>(null);
@@ -33,7 +34,16 @@ onMounted(load);
 <template>
   <n-spin :show="loading">
     <n-card v-if="writeup">
-      <h1 class="text-xl font-semibold">{{ writeup.title }}</h1>
+      <div class="detail-head">
+        <button
+          class="back-btn"
+          :title="writeup.challenge ? '返回题目' : '返回上一页'"
+          @click="writeup.challenge ? router.push(`/challenges/${writeup.challenge.id}`) : router.back()"
+        >
+          ←
+        </button>
+        <h1>{{ writeup.title }}</h1>
+      </div>
       <n-space class="mt-2" :size="10">
         <RouterLink :to="`/users/${writeup.author.username}`" class="text-indigo-500 hover:underline">
           {{ writeup.author.displayName }}

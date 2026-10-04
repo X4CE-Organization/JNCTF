@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { NCard, NDataTable, NButton, NSpace, NModal, NForm, NFormItem, NInput, NSelect, NSwitch, NInputNumber, NTag, useMessage } from 'naive-ui';
+import { NCard, NDataTable, NButton, NSpace, NModal, NForm, NFormItem, NInput, NSelect, NSwitch, NInputNumber, NTag, NDatePicker, useMessage } from 'naive-ui';
 import { useRouter } from 'vue-router';
 import { api } from '../../api';
 
@@ -120,9 +120,15 @@ onMounted(load);
           <n-form-item label="队伍人数"><n-input-number v-model:value="form.teamSize[0]" style="width: 90px" /> ~ <n-input-number v-model:value="form.teamSize[1]" style="width: 90px" /></n-form-item>
         </n-space>
         <n-space>
-          <n-form-item label="开始时间"><input :value="form.startAt" type="datetime-local" class="w-[220px] rounded border px-2 py-1 text-sm" @input="(e: any) => form.startAt = e.target.value" /></n-form-item>
-          <n-form-item label="结束时间"><input :value="form.endAt" type="datetime-local" class="w-[220px] rounded border px-2 py-1 text-sm" @input="(e: any) => form.endAt = e.target.value" /></n-form-item>
-          <n-form-item label="封榜时间"><input :value="form.freezeAt ?? ''" type="datetime-local" class="w-[220px] rounded border px-2 py-1 text-sm" @input="(e: any) => form.freezeAt = e.target.value" /></n-form-item>
+          <n-form-item label="开始时间">
+            <n-date-picker v-model:formatted-value="form.startAt" type="datetime" value-format="yyyy-MM-dd'T'HH:mm" clearable style="width: 210px" />
+          </n-form-item>
+          <n-form-item label="结束时间">
+            <n-date-picker v-model:formatted-value="form.endAt" type="datetime" value-format="yyyy-MM-dd'T'HH:mm" clearable style="width: 210px" />
+          </n-form-item>
+          <n-form-item label="封榜时间">
+            <n-date-picker v-model:formatted-value="form.freezeAt" type="datetime" value-format="yyyy-MM-dd'T'HH:mm" clearable style="width: 210px" />
+          </n-form-item>
         </n-space>
         <n-form-item label="规则（Markdown）"><n-input v-model:value="form.rules" type="textarea" :rows="5" /></n-form-item>
         <n-space>

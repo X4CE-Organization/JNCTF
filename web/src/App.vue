@@ -12,22 +12,23 @@ import { api } from './api';
 const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
-const dark = ref(true);
+const dark = ref(false);
 const unread = ref(0);
 const scrolled = ref(false);
 const mobileOpen = ref(false);
 
 const NAV = [
   { to: '/challenges', label: '题目' },
+  { to: '/submissions', label: '提交' },
   { to: '/competitions', label: '比赛' },
   { to: '/scoreboard', label: '榜单' },
   { to: '/teams', label: '团队' },
-  { to: '/writeups', label: '题解' },
+  { to: '/announcements', label: '公告' },
 ];
 
 const userOptions = computed(() => [
   { label: '个人主页', key: 'profile' },
-  { label: '我的题解', key: 'writeups' },
+  { label: '我的提交', key: 'submissions' },
   { label: '我的工单', key: 'tickets' },
   { label: `消息中心${unread.value ? `（${unread.value}）` : ''}`, key: 'notifications' },
   { label: '个人设置', key: 'settings' },
@@ -59,7 +60,7 @@ async function onUserSelect(key: string) {
   }
   const map: Record<string, string> = {
     profile: `/users/${auth.user?.username}`,
-    writeups: '/writeups?mine=1',
+    submissions: '/submissions?mine=1',
     tickets: '/tickets',
     notifications: '/notifications',
     settings: '/settings',
@@ -71,9 +72,15 @@ async function onUserSelect(key: string) {
 onMounted(async () => {
   await auth.bootstrap();
   await loadUnread();
+  document.title = auth.siteName;
+  const customFavicon = String(auth.meta?.settings['site.favicon'] ?? '');
+  if (customFavicon) {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (link) link.href = customFavicon;
+  }
   const saved = localStorage.getItem('jnctf-theme');
-  // 靶场终端风格默认深色
-  dark.value = saved ? saved === 'dark' : true;
+  // 默认浅色主题，用户切过之后按记忆来
+  dark.value = saved ? saved === 'dark' : false;
   document.documentElement.classList.toggle('dark', dark.value);
 
   window.addEventListener('scroll', () => {
@@ -87,6 +94,8 @@ function toggleTheme() {
   dark.value = !dark.value;
   localStorage.setItem('jnctf-theme', dark.value ? 'dark' : 'light');
   document.documentElement.classList.toggle('dark', dark.value);
+  // 图表等按 CSS 变量取色的组件，切换后需要重绘
+  window.dispatchEvent(new Event('jnctf-theme'));
 }
 </script>
 

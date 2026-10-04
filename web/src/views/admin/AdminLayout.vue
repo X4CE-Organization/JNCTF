@@ -1,47 +1,65 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { NCard, NMenu, NTag, NSpace, NButton } from 'naive-ui';
-import { RouterView, useRoute, useRouter } from 'vue-router';
+import { NTag } from 'naive-ui';
+import { RouterLink, RouterView, useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
 
 const auth = useAuthStore();
 const route = useRoute();
-const router = useRouter();
 
-const menuOptions = computed(() => {
-  const items: any[] = [
-    { label: '控制台总览', key: '/admin' },
-    { label: '用户管理', key: '/admin/users' },
-    { label: '题目管理', key: '/admin/challenges' },
-    { label: '比赛管理', key: '/admin/competitions' },
-    { label: '题解审核', key: '/admin/writeups' },
-    { label: '工单处理', key: '/admin/tickets' },
-    { label: '公告管理', key: '/admin/announcements' },
-  ];
-  if (auth.isSuperAdmin) {
-    items.push({ label: '操作日志', key: '/admin/logs' }, { label: '系统设置', key: '/admin/settings' });
-  }
-  return items;
-});
+interface AdminTab {
+  label: string;
+  to: string;
+  super?: boolean;
+  match: (path: string) => boolean;
+}
+
+const tabs: AdminTab[] = [
+  { label: '总览', to: '/admin', match: (p) => p === '/admin' },
+  { label: '用户', to: '/admin/users', match: (p) => p.startsWith('/admin/users') },
+  { label: '题目', to: '/admin/challenges', match: (p) => p.startsWith('/admin/challenges') },
+  { label: '比赛', to: '/admin/competitions', match: (p) => p.startsWith('/admin/competitions') || p.startsWith('/admin/awx') },
+  { label: '题解', to: '/admin/writeups', match: (p) => p.startsWith('/admin/writeups') },
+  { label: '工单', to: '/admin/tickets', match: (p) => p.startsWith('/admin/tickets') },
+  { label: '公告', to: '/admin/announcements', match: (p) => p.startsWith('/admin/announcements') },
+  { label: '日志', to: '/admin/logs', super: true, match: (p) => p.startsWith('/admin/logs') },
+  { label: '系统设置', to: '/admin/settings', super: true, match: (p) => p.startsWith('/admin/settings') },
+];
+
+const visibleTabs = computed(() => tabs.filter((t) => !t.super || auth.isSuperAdmin));
+const current = computed(() => visibleTabs.value.find((t) => t.match(route.path))?.label ?? '控制台');
 </script>
 
 <template>
-  <div class="space-y-4">
-    <n-card size="small">
-      <n-space align="center">
-        <span class="text-base font-semibold">管理控制台</span>
-        <n-tag size="small" :type="auth.isSuperAdmin ? 'error' : 'warning'">
+  <div class="admin-shell">
+    <div class="admin-bar">
+      <div class="admin-bar-lead">
+        <span class="admin-bar-title">管理控制台</span>
+        <n-tag size="small" :type="auth.isSuperAdmin ? 'error' : 'warning'" :bordered="false">
           {{ auth.isSuperAdmin ? '超级管理员' : '管理员' }}
         </n-tag>
-        <span class="text-xs opacity-60">{{ auth.siteName }} · @{{ auth.user?.username }}</span>
-        <n-button class="ml-auto" size="small" @click="router.push('/')">回到前台</n-button>
-      </n-space>
-    </n-card>
+        <span class="admin-bar-user mono">@{{ auth.user?.username }}</span>
+      </div>
 
-    <div class="grid gap-4 lg:grid-cols-[190px_1fr] lg:items-start">
-      <n-card class="lg:sticky lg:top-20" size="small">
-        <n-menu :options="menuOptions" :value="route.path" @update:value="(key: string) => router.push(key)" />
-      </n-card>
+      <nav class="admin-tabs">
+        <RouterLink
+          v-for="tab in visibleTabs"
+          :key="tab.to"
+          :to="tab.to"
+          class="admin-tab"
+          :class="tab.match(route.path) ? 'is-active' : ''"
+        >
+          {{ tab.label }}
+        </RouterLink>
+      </nav>
+
+      <RouterLink to="/" class="admin-exit">回到前台</RouterLink>
+    </div>
+
+    <div class="admin-body">
+      <div class="admin-crumb">
+        控制台<span class="sep">/</span><span class="cur">{{ current }}</span>
+      </div>
       <RouterView />
     </div>
   </div>

@@ -3,14 +3,20 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { NSpin, NAvatar } from 'naive-ui';
 import { RouterLink } from 'vue-router';
 import { api, query } from '../api';
+import StatBarChart from '../components/StatBarChart.vue';
 
 const type = ref<'user' | 'team'>('user');
 const loading = ref(false);
 const items = ref<any[]>([]);
+const breakdown = ref<any[]>([]);
 
 const podium = computed(() => items.value.slice(0, 3));
 const rest = computed(() => items.value.slice(3));
 const medals = ['01', '02', '03'];
+const breakdownChart = computed(() =>
+  breakdown.value.map((c) => ({ name: c.name, value: c.solves, color: c.color || undefined })),
+);
+const categoryTotal = computed(() => breakdown.value.reduce((sum, c) => sum + (c.challenges ?? 0), 0));
 
 async function load() {
   loading.value = true;
@@ -23,7 +29,13 @@ async function load() {
 }
 
 watch(type, load);
-onMounted(load);
+onMounted(async () => {
+  await load();
+  breakdown.value = await api
+    .get<any>('/api/scoreboard/breakdown')
+    .then((d) => d.items ?? [])
+    .catch(() => []);
+});
 </script>
 
 <template>
@@ -41,6 +53,11 @@ onMounted(load);
         </div>
       </div>
     </header>
+
+    <section v-if="podium.length" class="jk-panel">
+      <div class="jk-section"><h2>解题分布</h2><span class="count">按分类 · 共 {{ categoryTotal }} 题</span></div>
+      <StatBarChart :items="breakdownChart" label="各分类解题数" />
+    </section>
 
     <n-spin :show="loading">
       <div v-if="!items.length && !loading" class="jk-empty">

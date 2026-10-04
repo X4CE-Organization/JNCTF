@@ -22,6 +22,38 @@ siteRouter.get(
   asyncHandler(async (_req, res) => ok(res, publicSettings())),
 );
 
+/** 公告列表：前台「公告」页用，只返回可见的 */
+siteRouter.get(
+  '/announcements',
+  asyncHandler(async (req, res) => {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const size = Math.min(50, Math.max(1, Number(req.query.size) || 20));
+    const [total, rows] = await Promise.all([
+      prisma.announcement.count({ where: { visible: true } }),
+      prisma.announcement.findMany({
+        where: { visible: true },
+        orderBy: [{ pinned: 'desc' }, { publishedAt: 'desc' }],
+        skip: (page - 1) * size,
+        take: size,
+      }),
+    ]);
+    return ok(res, {
+      items: rows.map((a) => ({
+        id: a.id,
+        title: a.title,
+        content: a.content,
+        level: a.level,
+        pinned: a.pinned,
+        publishedAt: a.publishedAt,
+      })),
+      total,
+      page,
+      size,
+      totalPages: Math.ceil(total / size),
+    });
+  }),
+);
+
 siteRouter.get(
   '/stats',
   asyncHandler(async (_req, res) => {

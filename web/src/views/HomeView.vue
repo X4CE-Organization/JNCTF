@@ -69,7 +69,10 @@ onMounted(async () => {
 
       <!-- 公告 -->
       <section v-if="auth.meta?.announcements?.length" class="jk-panel">
-        <div class="jk-section"><h2>公告</h2></div>
+        <div class="jk-section">
+          <h2>公告</h2>
+          <RouterLink to="/announcements" class="more">全部 →</RouterLink>
+        </div>
         <div v-for="item in auth.meta.announcements.slice(0, 3)" :key="item.id" class="jk-list-item" style="align-items: flex-start">
           <span
             class="jk-chip"

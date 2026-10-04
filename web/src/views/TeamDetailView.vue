@@ -73,6 +73,7 @@ onMounted(load);
   <n-spin :show="loading">
     <div v-if="team" class="space-y-4">
       <n-card>
+        <button class="back-btn" title="返回团队列表" style="margin-bottom: 12px" @click="router.push('/teams')">←</button>
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div class="flex items-center gap-2">

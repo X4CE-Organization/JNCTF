@@ -4,7 +4,7 @@ import { NButton, NInput, NSpin, useMessage, NPopconfirm } from 'naive-ui';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { useAuthStore } from '../stores/auth';
-import { DIFFICULTY_META } from '../theme';
+import { DIFFICULTY_META, SUBMISSION_META } from '../theme';
 import MarkdownView from '../components/MarkdownView.vue';
 
 const route = useRoute();
@@ -19,18 +19,66 @@ const submitting = ref(false);
 const instance = ref<any>(null);
 const starting = ref(false);
 
+// 题解：跟随题目展示，不再单独开「题解广场」
+const writeups = ref<any[]>([]);
+const writeupOpen = ref(false);
+const writeupForm = ref({ title: '', content: '', url: '' });
+const writeupPosting = ref(false);
+const recentSubmissions = ref<any[]>([]);
+
 const difficulty = computed(() => DIFFICULTY_META[challenge.value?.difficulty] ?? DIFFICULTY_META.EASY!);
 const solved = computed(() => Boolean(challenge.value?.solved));
+
+async function loadWriteups() {
+  if (!challenge.value) return;
+  writeups.value = await api
+    .get<any>(`/api/writeups?challengeId=${challenge.value.id}&size=50`)
+    .then((d) => d.items ?? [])
+    .catch(() => []);
+}
 
 async function load() {
   loading.value = true;
   try {
     challenge.value = await api.get<any>(`/api/challenges/${route.params.id}`);
     instance.value = challenge.value.instance;
+    await loadWriteups();
+    recentSubmissions.value = await api
+      .get<any>(`/api/submissions/public?challengeId=${challenge.value.id}&size=6`)
+      .then((d) => d.items ?? [])
+      .catch(() => []);
   } catch (err: any) {
     message.error(err?.message ?? '题目加载失败');
   } finally {
     loading.value = false;
+  }
+}
+
+async function publishWriteup() {
+  if (!writeupForm.value.title.trim()) {
+    message.warning('题解需要标题');
+    return;
+  }
+  if (!writeupForm.value.content.trim() && !writeupForm.value.url.trim()) {
+    message.warning('写点正文，或者贴一个外部链接');
+    return;
+  }
+  writeupPosting.value = true;
+  try {
+    const result = await api.post<any>('/api/writeups', {
+      challengeId: challenge.value.id,
+      title: writeupForm.value.title.trim(),
+      content: writeupForm.value.content.trim() || undefined,
+      url: writeupForm.value.url.trim() || undefined,
+    });
+    message.success(result.state === 'APPROVED' ? '题解已发布' : '题解已提交，等待审核');
+    writeupForm.value = { title: '', content: '', url: '' };
+    writeupOpen.value = false;
+    await loadWriteups();
+  } catch (err: any) {
+    message.error(err?.message ?? '发布失败');
+  } finally {
+    writeupPosting.value = false;
   }
 }
 
@@ -211,8 +259,86 @@ onMounted(load);
               <span v-else>—</span>
             </div>
           </section>
+
+          <section class="jk-panel">
+            <div class="jk-section">
+              <h2>最近提交</h2>
+              <RouterLink :to="`/submissions?challengeId=${challenge.id}`" class="more">全部 →</RouterLink>
+            </div>
+            <p v-if="!recentSubmissions.length" style="margin: 0; font-size: 13px; color: var(--jk-muted)">
+              还没有人提交过这道题
+            </p>
+            <div v-for="s in recentSubmissions" :key="s.id" class="jk-list-item" style="padding: 8px 0">
+              <span class="status-pill" :class="`s-${s.status.toLowerCase()}`">
+                {{ (SUBMISSION_META[s.status] || { label: s.status }).label }}
+              </span>
+              <RouterLink
+                :to="`/users/${s.user.username}`"
+                style="flex: 1; min-width: 0; font-size: 13px; color: inherit; text-decoration: none"
+              >
+                {{ s.user.displayName }}
+              </RouterLink>
+              <span class="mono" style="font-size: 11px; color: var(--jk-muted)">
+                {{ new Date(s.createdAt).toLocaleTimeString() }}
+              </span>
+            </div>
+          </section>
         </aside>
       </div>
+
+      <section class="jk-panel">
+        <div class="jk-section">
+          <h2>题解</h2>
+          <span class="count">{{ writeups.length }}</span>
+          <button
+            v-if="solved && challenge.allowWriteup"
+            class="jk-mini-btn"
+            style="margin-left: auto"
+            @click="writeupOpen = !writeupOpen"
+          >
+            {{ writeupOpen ? '收起' : '写题解' }}
+          </button>
+        </div>
+
+        <div v-if="writeupOpen" class="writeup-form">
+          <n-input v-model:value="writeupForm.title" placeholder="标题" maxlength="200" />
+          <n-input
+            v-model:value="writeupForm.content"
+            type="textarea"
+            :autosize="{ minRows: 5, maxRows: 14 }"
+            placeholder="支持 Markdown，写清思路、脚本和踩坑点"
+          />
+          <n-input v-model:value="writeupForm.url" placeholder="外部链接（可选，比如博客 / GitHub）" maxlength="512" />
+          <div class="writeup-form-actions">
+            <span class="writeup-hint">提交后需要管理员审核，通过后会展示在这里</span>
+            <n-button size="small" type="primary" :loading="writeupPosting" @click="publishWriteup">提交题解</n-button>
+          </div>
+        </div>
+
+        <p v-if="!challenge.allowWriteup" class="writeup-empty">本题暂不接受题解投稿</p>
+        <p v-else-if="!solved" class="writeup-empty">
+          <RouterLink to="/login" style="color: var(--jk-accent)">登录</RouterLink>
+          并解出这道题之后，就可以在这里写下你的题解。
+        </p>
+
+        <div v-if="writeups.length" class="writeup-list">
+          <article v-for="w in writeups" :key="w.id" class="writeup-item">
+            <div class="writeup-item-head">
+              <RouterLink :to="`/writeups/${w.id}`" class="writeup-title">{{ w.title }}</RouterLink>
+              <span class="writeup-meta">
+                <RouterLink :to="`/users/${w.author.username}`">{{ w.author.displayName }}</RouterLink>
+                <span class="sep">·</span>
+                <span>{{ new Date(w.createdAt).toLocaleDateString() }}</span>
+                <span class="sep">·</span>
+                <span>👍 {{ w.likes }}</span>
+                <span class="sep">·</span>
+                <span>👁 {{ w.views }}</span>
+              </span>
+            </div>
+          </article>
+        </div>
+        <p v-else-if="challenge.allowWriteup && solved" class="writeup-empty">还没有题解，来做第一个。</p>
+      </section>
     </div>
   </n-spin>
 </template>

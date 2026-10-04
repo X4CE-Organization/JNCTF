@@ -1,8 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ==========================================================================
    JNCTF · 靶场终端风格
 
-   设计取向：深色打底、等宽字体的数据展示、锐利直角、荧光青绿点缀，
-   配一层很淡的网格纹理。刻意避开「大圆角 + 柔和渐变卡片」那一类通用后台视觉。
+  设计取向：深色打底、等宽字体的数据展示、锐利直角、荧光青绿点缀，
+  配一层很淡的网格纹理。刻意避开「大圆角 + 柔和渐变卡片」那一类通用后台视觉。
    ========================================================================== */
 
 :root {
@@ -24,6 +28,12 @@
   --jk-radius: 8px;
   --jk-radius-sm: 6px;
   --jk-header-h: 60px;
+  /* 给早期页面用的别名，避免因为变量名不一致整块样式失效 */
+  --jk-primary: var(--jk-accent);
+  --jk-success: var(--jk-accent);
+  --jk-surface: var(--jk-bg-elev);
+  --jk-surface-2: var(--jk-bg-soft);
+  --jk-shadow-sm: 0 1px 3px rgba(11, 15, 25, 0.1);
 }
 
 .dark,
@@ -46,6 +56,7 @@ html.dark {
   --jk-danger: #ff4d6d;
   --jk-info: #3ba0ff;
   --jk-grid: rgba(255, 255, 255, 0.028);
+  --jk-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 * {
@@ -1055,6 +1066,372 @@ body {
   color: var(--jk-accent);
 }
 
+/* ------------------------------------------------------------ 管理控制台 */
+
+.admin-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 紧凑横条：标题 + 横向标签导航 + 返回前台，整体锁定在 46px 高 */
+.admin-bar {
+  position: sticky;
+  top: var(--jk-header-h);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 46px;
+  padding: 5px 12px;
+  border: 1px solid var(--jk-border);
+  border-radius: var(--jk-radius);
+  background: color-mix(in srgb, var(--jk-bg-elev) 94%, transparent);
+  backdrop-filter: saturate(160%) blur(10px);
+}
+
+.admin-bar-lead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.admin-bar-title {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-bar-user {
+  font-size: 11.5px;
+  color: var(--jk-muted);
+}
+
+.admin-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.admin-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-tab {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--jk-text-2);
+  white-space: nowrap;
+  text-decoration: none;
+  transition: color 0.14s ease, background 0.14s ease;
+}
+
+.admin-tab:hover {
+  color: var(--jk-text);
+  background: var(--jk-bg-soft);
+}
+
+.admin-tab.is-active {
+  color: var(--jk-accent);
+  background: var(--jk-accent-soft);
+  font-weight: 600;
+}
+
+.admin-exit {
+  flex: none;
+  padding: 6px 12px;
+  border: 1px solid var(--jk-border);
+  border-radius: 4px;
+  font-size: 12.5px;
+  color: var(--jk-text-2);
+  white-space: nowrap;
+  text-decoration: none;
+  transition: color 0.14s ease, border-color 0.14s ease;
+}
+
+.admin-exit:hover {
+  color: var(--jk-accent);
+  border-color: var(--jk-accent);
+}
+
+.admin-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-crumb {
+  font-family: var(--jk-mono);
+  font-size: 11.5px;
+  color: var(--jk-muted);
+}
+
+.admin-crumb .sep {
+  margin: 0 6px;
+}
+
+.admin-crumb .cur {
+  color: var(--jk-text-2);
+}
+
+/* 设置类页面：左标签右控件的一行一项布局 */
+.setting-row {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 12px 18px;
+  align-items: start;
+  padding: 14px 0;
+  border-bottom: 1px dashed var(--jk-border);
+}
+
+.setting-row:last-child {
+  border-bottom: 0;
+}
+
+.setting-label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.setting-label strong {
+  font-size: 13.5px;
+}
+
+.setting-label small {
+  font-size: 11.5px;
+  color: var(--jk-muted);
+  line-height: 1.5;
+}
+
+.setting-control {
+  min-width: 0;
+  max-width: 560px;
+}
+
+/* ------------------------------------------------------- 题目内题解区块 */
+
+.jk-mini-btn {
+  padding: 4px 11px;
+  border: 1px solid var(--jk-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--jk-text-2);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.14s ease, border-color 0.14s ease;
+}
+
+.jk-mini-btn:hover {
+  color: var(--jk-accent);
+  border-color: var(--jk-accent);
+}
+
+.writeup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  margin-bottom: 14px;
+  border: 1px dashed var(--jk-border);
+  border-radius: 6px;
+  background: var(--jk-bg-soft);
+}
+
+.writeup-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.writeup-hint {
+  flex: 1;
+  font-size: 11.5px;
+  color: var(--jk-muted);
+}
+
+.writeup-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--jk-muted);
+}
+
+.writeup-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.writeup-item {
+  padding: 11px 0;
+  border-bottom: 1px dashed var(--jk-border);
+}
+
+.writeup-item:last-child {
+  border-bottom: 0;
+}
+
+.writeup-item-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.writeup-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--jk-text);
+  text-decoration: none;
+}
+
+.writeup-title:hover {
+  color: var(--jk-accent);
+}
+
+.writeup-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--jk-muted);
+}
+
+.writeup-meta a {
+  color: var(--jk-text-2);
+  text-decoration: none;
+}
+
+.writeup-meta a:hover {
+  color: var(--jk-accent);
+}
+
+/* ------------------------------------------------------- 提交记录 / 筛选条 */
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.table-link {
+  color: var(--jk-text);
+  text-decoration: none;
+}
+
+.table-link:hover {
+  color: var(--jk-accent);
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.7;
+}
+
+.status-pill.s-correct {
+  color: var(--jk-accent);
+  border-color: color-mix(in srgb, var(--jk-accent) 40%, transparent);
+  background: var(--jk-accent-soft);
+}
+
+.status-pill.s-wrong {
+  color: var(--jk-danger);
+  border-color: color-mix(in srgb, var(--jk-danger) 40%, transparent);
+  background: color-mix(in srgb, var(--jk-danger) 10%, transparent);
+}
+
+.status-pill.s-duplicate,
+.status-pill.s-rate_limited {
+  color: var(--jk-amber);
+  border-color: color-mix(in srgb, var(--jk-amber) 40%, transparent);
+  background: color-mix(in srgb, var(--jk-amber) 10%, transparent);
+}
+
+.status-pill.s-closed {
+  color: var(--jk-muted);
+  border-color: var(--jk-border);
+  background: var(--jk-bg-soft);
+}
+
+.pager {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+/* --------------------------------------------------------------- 公告页 */
+
+.ann-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.ann-head h3 {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.ann-date {
+  font-size: 11.5px;
+  color: var(--jk-muted);
+}
+
+.ann-toggle {
+  flex: none;
+  padding: 3px 10px;
+  border: 1px solid var(--jk-border);
+  border-radius: 4px;
+  font-size: 11.5px;
+  color: var(--jk-text-2);
+}
+
+.ann-head:hover .ann-toggle {
+  color: var(--jk-accent);
+  border-color: var(--jk-accent);
+}
+
+.ann-body {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--jk-border);
+}
+
+/* 带返回按钮的详情页头部 */
+.detail-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.detail-head h1 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.profile-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 @media (max-width: 960px) {
   .nav {
     display: none;
@@ -1079,5 +1456,22 @@ body {
   }
   .user-meta {
     display: none;
+  }
+  .admin-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .admin-tabs {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .admin-bar-user {
+    display: none;
+  }
+  .setting-row {
+    grid-template-columns: 1fr;
+  }
+  .setting-label {
+    gap: 1px;
   }
 }

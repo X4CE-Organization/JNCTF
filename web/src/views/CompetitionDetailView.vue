@@ -87,6 +87,7 @@ onMounted(load);
   <n-spin :show="loading">
     <div v-if="competition" class="space-y-4">
       <n-card>
+        <button class="back-btn" title="返回比赛列表" style="margin-bottom: 12px" @click="router.push('/competitions')">←</button>
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">
