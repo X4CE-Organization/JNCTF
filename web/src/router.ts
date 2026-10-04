@@ -34,6 +34,7 @@ const routes = [
   },
   { path: '/login', name: 'login', component: () => import('./views/LoginView.vue') },
   { path: '/register', name: 'register', component: () => import('./views/RegisterView.vue') },
+  { path: '/oauth/callback', name: 'oauth-callback', component: () => import('./views/OAuthCallbackView.vue') },
   {
     path: '/admin',
     component: () => import('./views/admin/AdminLayout.vue'),

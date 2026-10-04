@@ -1453,6 +1453,34 @@ body {
   gap: 14px;
 }
 
+/* 维护模式提示页 */
+.maintenance-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.maintenance-code {
+  font-size: 44px;
+  font-weight: 700;
+  color: var(--jk-amber);
+  letter-spacing: 0.08em;
+}
+
+.maintenance-page h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.maintenance-page p {
+  margin: 0 0 8px;
+  font-size: 13.5px;
+  color: var(--jk-muted);
+}
+
 @media (max-width: 960px) {
   .nav {
     display: none;

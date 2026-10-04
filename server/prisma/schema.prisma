@@ -32,6 +32,7 @@ model User {
   id           BigInt     @id @default(autoincrement())
   username     String     @unique @db.VarChar(32)
   email        String?    @unique @db.VarChar(128)
+  phone        String?    @unique @db.VarChar(32)
   passwordHash String     @map("password_hash")
   displayName  String?    @map("display_name") @db.VarChar(48)
   avatar       String?    @db.VarChar(512)
@@ -44,6 +45,7 @@ model User {
   status         UserStatus @default(ACTIVE)
   score          Int        @default(0)
   emailVerified  Boolean    @default(false) @map("email_verified")
+  phoneVerified  Boolean    @default(false) @map("phone_verified")
   totpSecret     String?    @map("totp_secret") @db.VarChar(64)
   totpEnabled    Boolean    @default(false) @map("totp_enabled")
   hidden         Boolean    @default(false)
@@ -73,9 +75,28 @@ model User {
   registrations    CompetitionParticipant[]
   awxAttacks       AwxAttack[]             @relation("AwxAttacker")
   authoredChallenges Challenge[]           @relation("ChallengeAuthor")
+  oauthAccounts    OAuthAccount[]
 
   @@index([score])
   @@map("users")
+}
+
+/** 第三方登录绑定。同一个第三方账号只能绑到一个站内账号上。 */
+model OAuthAccount {
+  id             BigInt   @id @default(autoincrement())
+  userId         BigInt   @map("user_id")
+  provider       String   @db.VarChar(32)
+  providerUserId String   @map("provider_user_id") @db.VarChar(128)
+  providerName   String?  @map("provider_name") @db.VarChar(128)
+  avatar         String?  @db.VarChar(512)
+  createdAt      DateTime @default(now()) @map("created_at")
+  lastLoginAt    DateTime? @map("last_login_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+  @@map("oauth_accounts")
 }
 
 model Team {

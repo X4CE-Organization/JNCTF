@@ -10,7 +10,9 @@ import { config } from './config.js';
 import { logger } from './lib/logger.js';
 import { errorHandler } from './lib/errors.js';
 import { attachUser } from './middleware/auth.js';
+import { getBool, getSetting } from './lib/settings.js';
 import { authRouter } from './routes/auth.js';
+import { oauthRouter } from './routes/oauth.js';
 import { siteRouter } from './routes/site.js';
 import { challengeRouter, submissionRouter } from './routes/challenges.js';
 import { scoreboardRouter } from './routes/scoreboard.js';
@@ -38,7 +40,24 @@ export function createApp() {
 
   app.use(attachUser);
 
+  /**
+   * 维护模式：前台照常返回 SPA（由前端渲染提示页），API 只放行
+   * 登录相关、站点元信息和管理接口，管理员不受影响。
+   */
+  app.use((req, res, next) => {
+    if (!getBool('site.maintenance')) return next();
+    if (!req.path.startsWith('/api/')) return next();
+    if (['/api/auth', '/api/admin', '/api/site'].some((prefix) => req.path.startsWith(prefix))) return next();
+    if (req.user && req.user.role !== 'USER') return next();
+    res.status(503).json({
+      success: false,
+      error: { code: 'MAINTENANCE', message: getSetting('site.maintenance_notice') || '站点正在维护' },
+      timestamp: new Date().toISOString(),
+    });
+  });
+
   app.use('/api/auth', authRouter);
+  app.use('/api/auth/oauth', oauthRouter);
   app.use('/api/site', siteRouter);
   app.use('/api/challenges', challengeRouter);
   app.use('/api/submissions', submissionRouter);

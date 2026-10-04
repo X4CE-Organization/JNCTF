@@ -25,6 +25,15 @@ const NAV = [
   { to: '/submissions', label: '提交' },
 ];
 
+/** 维护模式：管理员照常访问，普通访客只看提示页（登录、回调页仍然放行） */
+const OPEN_PATHS = ['/login', '/register', '/oauth/callback'];
+const maintenance = computed(
+  () =>
+    auth.meta?.settings['site.maintenance'] === 'true' &&
+    !auth.isAdmin &&
+    !OPEN_PATHS.includes(route.path),
+);
+
 const userOptions = computed(() => [
   { label: '个人主页', key: 'profile' },
   { label: '我的提交', key: 'submissions' },
@@ -174,8 +183,14 @@ function toggleTheme() {
 
             <!-- 内容 -->
             <main class="app-main">
+              <div v-if="maintenance" class="maintenance-page">
+                <div class="mono maintenance-code">503</div>
+                <h1>站点维护中</h1>
+                <p>{{ auth.meta?.settings['site.maintenance_notice'] || '站点正在维护，请稍后再来' }}</p>
+                <RouterLink to="/login" class="ghost-link">管理员登录</RouterLink>
+              </div>
               <RouterView v-slot="{ Component }">
-                <Transition name="fade" mode="out-in">
+                <Transition v-if="!maintenance" name="fade" mode="out-in">
                   <component :is="Component" />
                 </Transition>
               </RouterView>

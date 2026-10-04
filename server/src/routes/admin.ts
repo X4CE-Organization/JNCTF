@@ -5,6 +5,9 @@ import { prisma } from '../lib/prisma.js';
 import { ApiError, asyncHandler, ok } from '../lib/errors.js';
 import { requireAdmin, requireSuperAdmin } from '../middleware/auth.js';
 import { allSettings, resetSettings, updateSettings } from '../lib/settings.js';
+import { mailConfig, sendMailDetailed, verifyMailConnection } from '../lib/mail.js';
+import { sendTestSms } from '../lib/sms.js';
+import { enabledProviders } from '../services/oauth.js';
 import { audit, notify } from '../lib/audit.js';
 import { awxDockerStats, dockerAvailable, startAwxTarget, stopAwxTarget } from '../services/awx-docker.js';
 import { generateRounds } from '../services/awd.js';
@@ -936,6 +939,72 @@ adminRouter.post(
     await resetSettings(keys);
     await audit(req, actor, 'admin.settings_reset', 'setting', null, keys?.join(',') ?? 'all');
     return ok(res, { ok: true });
+  }),
+);
+
+/* ---------------------------------------------------------- 通道自检 */
+
+/** 看看当前 SMTP 配置长什么样（不返回密码），并可选真实连一次 */
+adminRouter.get(
+  '/mail/status',
+  asyncHandler(async (req, res) => {
+    requireSuperAdmin(req);
+    const cfg = mailConfig();
+    return ok(res, {
+      enabled: cfg.enabled,
+      host: cfg.host,
+      port: cfg.port,
+      secure: cfg.secure,
+      user: cfg.user,
+      hasPassword: Boolean(cfg.pass),
+      from: cfg.from,
+    });
+  }),
+);
+
+/** 发一封测试邮件；只带 to 时先做连通性检查 */
+adminRouter.post(
+  '/mail/test',
+  asyncHandler(async (req, res) => {
+    const actor = requireSuperAdmin(req);
+    const to = String(req.body?.to ?? '').trim();
+    const verify = await verifyMailConnection();
+    if (!verify.ok && !verify.skipped) {
+      return ok(res, { ok: false, stage: 'connect', error: verify.error });
+    }
+    if (verify.skipped) return ok(res, { ok: false, stage: 'config', error: verify.error });
+    if (!to) return ok(res, { ok: true, stage: 'connect', message: 'SMTP 连接正常' });
+    const sent = await sendMailDetailed(to, '【JNCTF】测试邮件', '如果你收到这封邮件，说明 SMTP 配置已经生效。');
+    await audit(req, actor, 'admin.mail_test', 'setting', null, to);
+    return ok(res, { ok: sent.ok, stage: sent.ok ? 'sent' : 'send', error: sent.error });
+  }),
+);
+
+/** 发一条测试短信 */
+adminRouter.post(
+  '/sms/test',
+  asyncHandler(async (req, res) => {
+    const actor = requireSuperAdmin(req);
+    const phone = String(req.body?.phone ?? '').replace(/[\s-]/g, '');
+    if (!phone) throw ApiError.badRequest('请填写手机号');
+    const code = String(crypto.randomInt(100000, 999999));
+    const result = await sendTestSms(phone, code);
+    await audit(req, actor, 'admin.sms_test', 'setting', null, phone);
+    return ok(res, {
+      ok: result.ok,
+      error: result.error,
+      // 通道为 none 且开了调试回显时，把验证码带回来方便自测
+      devCode: result.debugCode,
+    });
+  }),
+);
+
+/** 第三方登录通道状态，后台一眼看出哪个没配全 */
+adminRouter.get(
+  '/oauth/status',
+  asyncHandler(async (req, res) => {
+    requireSuperAdmin(req);
+    return ok(res, { items: enabledProviders() });
   }),
 );
 

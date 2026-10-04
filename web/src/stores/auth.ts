@@ -10,6 +10,10 @@ export interface SessionUser {
   score: number;
   totpEnabled: boolean;
   email?: string;
+  phone?: string;
+  emailVerified?: boolean;
+  phoneVerified?: boolean;
+  hasPassword?: boolean;
   bio?: string;
   website?: string;
   country?: string;
@@ -66,8 +70,26 @@ export const useAuthStore = defineStore('auth', {
       this.user = data.user;
       return data.user;
     },
-    async register(payload: { username: string; password: string; email?: string; displayName?: string }) {
+    async register(payload: {
+      username: string;
+      password: string;
+      email?: string;
+      phone?: string;
+      phoneCode?: string;
+      emailCode?: string;
+      displayName?: string;
+    }) {
       const data = await api.post<{ accessToken: string; refreshToken: string; user: SessionUser }>('/api/auth/register', payload);
+      setTokens(data.accessToken, data.refreshToken);
+      this.user = data.user;
+      return data.user;
+    },
+    /** 手机号 / 邮箱验证码登录 */
+    async loginWithCode(kind: 'phone' | 'email', value: string, code: string) {
+      const data = await api.post<{ accessToken: string; refreshToken: string; user: SessionUser }>(
+        `/api/auth/login/${kind}`,
+        kind === 'phone' ? { phone: value, code } : { email: value, code },
+      );
       setTokens(data.accessToken, data.refreshToken);
       this.user = data.user;
       return data.user;
