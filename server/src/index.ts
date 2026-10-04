@@ -5,12 +5,14 @@ import { prisma } from './lib/prisma.js';
 import { initRedis } from './lib/redis.js';
 import { warmSettings } from './lib/settings.js';
 import { ensureSeed } from './seed.js';
+import { startScheduler } from './scheduler.js';
 
 async function main() {
   await prisma.$connect();
   await initRedis();
   await warmSettings();
   await ensureSeed();
+  startScheduler();
 
   const app = createApp();
   const server = app.listen(config.port, () => {

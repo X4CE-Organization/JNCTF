@@ -12,6 +12,11 @@ import { errorHandler } from './lib/errors.js';
 import { attachUser } from './middleware/auth.js';
 import { authRouter } from './routes/auth.js';
 import { siteRouter } from './routes/site.js';
+import { challengeRouter, submissionRouter } from './routes/challenges.js';
+import { scoreboardRouter } from './routes/scoreboard.js';
+import { teamRouter } from './routes/teams.js';
+import { competitionRouter } from './routes/competitions.js';
+import { awdRouter } from './routes/awd.js';
 
 export function createApp() {
   const app = express();
@@ -32,6 +37,12 @@ export function createApp() {
 
   app.use('/api/auth', authRouter);
   app.use('/api/site', siteRouter);
+  app.use('/api/challenges', challengeRouter);
+  app.use('/api/submissions', submissionRouter);
+  app.use('/api/scoreboard', scoreboardRouter);
+  app.use('/api/teams', teamRouter);
+  app.use('/api/competitions', competitionRouter);
+  app.use('/api/awd', awdRouter);
 
   // 前端构建产物（存在时由后端托管）
   const webDist = path.resolve(config.rootDir, '../web/dist');

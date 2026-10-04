@@ -40,6 +40,42 @@ export async function rateLimit(key: string, seconds: number): Promise<boolean> 
   }
 }
 
+/**
+ * 失败计数器：每次调用 +1，返回当前失败次数；超过 ttl 自动清零。
+ * 登录锁定用这个，而不是 rateLimit —— 限流是「多久只能来一次」，
+ * 登录要的是「失败几次才锁」，语义不一样。
+ */
+export async function increaseFailure(key: string, ttlSeconds: number): Promise<number> {
+  if (redis.status !== 'ready') return 0;
+  try {
+    const full = `jnctf:fail:${key}`;
+    const count = await redis.incr(full);
+    if (count === 1) await redis.expire(full, Math.max(1, ttlSeconds));
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
+export async function readFailure(key: string): Promise<number> {
+  if (redis.status !== 'ready') return 0;
+  try {
+    const value = await redis.get(`jnctf:fail:${key}`);
+    return value ? Number.parseInt(value, 10) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function clearFailure(key: string): Promise<void> {
+  if (redis.status !== 'ready') return;
+  try {
+    await redis.del(`jnctf:fail:${key}`);
+  } catch {
+    /* 忽略 */
+  }
+}
+
 export async function cacheSet(key: string, value: unknown, ttlSeconds: number): Promise<void> {
   if (redis.status !== 'ready' || ttlSeconds <= 0) return;
   try {

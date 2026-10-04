@@ -9,7 +9,7 @@ import { buildOtpAuthUrl, generateSecret, verifyTotp } from '../lib/totp.js';
 import { getBool, getSetting } from '../lib/settings.js';
 import { audit, clientIp, notify } from '../lib/audit.js';
 import { sendMail } from '../lib/mail.js';
-import { rateLimit, redis } from '../lib/redis.js';
+import { clearFailure, increaseFailure, rateLimit, readFailure, redis } from '../lib/redis.js';
 import { requireAuth } from '../middleware/auth.js';
 import { config } from '../config.js';
 
@@ -112,8 +112,10 @@ authRouter.post(
     const body = loginSchema.parse(req.body);
     const ip = clientIp(req);
     const limit = Number(getSetting('security.login_fail_limit')) || 10;
+    const lockMinutes = Number(getSetting('security.login_lock_minutes')) || 15;
     const lockKey = `login:${body.username}:${ip}`;
-    if (limit > 0 && !(await rateLimit(lockKey, Number(getSetting('security.login_lock_minutes')) * 60))) {
+    // 只有「失败次数」超限才锁，正常登录多少次都不受影响
+    if (limit > 0 && (await readFailure(lockKey)) >= limit) {
       throw ApiError.tooMany('登录失败次数过多，请稍后再试');
     }
 
@@ -121,6 +123,7 @@ authRouter.post(
       where: { OR: [{ username: body.username }, { email: body.username.toLowerCase() }] },
     });
     if (!user || !(await bcrypt.compare(body.password, user.passwordHash))) {
+      await increaseFailure(lockKey, lockMinutes * 60);
       await prisma.loginLog.create({ data: { userId: user?.id ?? null, username: body.username, ip, userAgent: req.headers['user-agent'] ?? '', success: false } });
       throw ApiError.unauthorized('用户名或密码不正确');
     }
@@ -132,6 +135,7 @@ authRouter.post(
       if (!verifyTotp(user.totpSecret, body.totpCode)) throw ApiError.unauthorized('两步验证码不正确');
     }
 
+    await clearFailure(lockKey);
     await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date(), lastLoginIp: ip } });
     await prisma.loginLog.create({ data: { userId: user.id, username: user.username, ip, userAgent: req.headers['user-agent'] ?? '', success: true } });
     await audit(req, user, 'user.login', 'user', user.id);
