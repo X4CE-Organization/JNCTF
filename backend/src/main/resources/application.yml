@@ -1,0 +1,118 @@
+server:
+  port: ${PORT:8080}
+  compression:
+    enabled: true
+  error:
+    include-message: always
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: jnctf
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/jnctf}
+    username: ${DATABASE_USERNAME:${USER:postgres}}
+    password: ${DATABASE_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:15}
+      minimum-idle: 3
+      connection-timeout: 20000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 50
+          time_zone: UTC
+        order_inserts: true
+        order_updates: true
+        format_sql: false
+    show-sql: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 3s
+
+  servlet:
+    multipart:
+      max-file-size: ${MAX_UPLOAD_SIZE:100MB}
+      max-request-size: ${MAX_UPLOAD_SIZE:100MB}
+
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:25}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_AUTH:false}
+          starttls:
+            enable: ${MAIL_TLS:false}
+
+  thymeleaf:
+    cache: true
+
+management:
+  health:
+    # 邮件是可选功能，没配 SMTP 时不该把健康检查拖成 DOWN
+    mail:
+      enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  level:
+    root: INFO
+    com.jnctf: INFO
+    org.hibernate.SQL: WARN
+
+jnctf:
+  site-url: ${SITE_URL:http://localhost:8080}
+  upload-dir: ${UPLOAD_DIR:./data/uploads}
+  jwt:
+    # 生产环境务必换成随机串：openssl rand -base64 48
+    secret: ${JWT_SECRET:change-me-to-a-long-random-string-at-least-32-bytes-long}
+    access-token-minutes: ${JWT_ACCESS_MINUTES:120}
+    refresh-token-days: ${JWT_REFRESH_DAYS:14}
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:JNCTF <no-reply@localhost>}
+  init:
+    # 只在数据库为空时创建，登录后请立刻改密码
+    username: ${ROOT_USERNAME:root}
+    password: ${ROOT_PASSWORD:jnctf123456}
+    email: ${ROOT_EMAIL:root@jnctf.local}
+  docker:
+    enabled: ${DOCKER_ENABLED:false}
+    host: ${DOCKER_HOST:unix:///var/run/docker.sock}
+    network: ${DOCKER_NETWORK:jnctf-challenges}
+    public-host: ${DOCKER_PUBLIC_HOST:localhost}
+    port-range-start: ${DOCKER_PORT_START:30000}
+    port-range-end: ${DOCKER_PORT_END:31000}

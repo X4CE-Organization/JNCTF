@@ -1,0 +1,19 @@
+# 本地开发：连本机 PostgreSQL 与 Redis，SQL 打出来方便排查
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/jnctf}
+    username: ${DATABASE_USERNAME:${USER}}
+    password: ${DATABASE_PASSWORD:}
+  jpa:
+    show-sql: false
+    hibernate:
+      # 表结构统一交给 Flyway 管理，Hibernate 只做校验，防止两边不一致
+      ddl-auto: validate
+
+logging:
+  level:
+    com.jnctf: DEBUG
+
+jnctf:
+  jwt:
+    secret: dev-only-secret-please-change-in-production-0123456789

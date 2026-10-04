@@ -1,0 +1,30 @@
+# Java / Maven
+target/
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/
+
+# 前端
+node_modules/
+dist/
+.vite/
+*.local
+
+# 运行期数据：上传文件、数据库备份
+data/
+!data/.gitkeep
+*.log
+logs/
+
+# 环境变量（示例文件例外）
+.env
+.env.*
+!.env.example
+
+# 编辑器与系统垃圾
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
