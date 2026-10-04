@@ -73,8 +73,12 @@ export function createApp() {
   app.use('/api/users', userRouter);
 
   // 前端构建产物（存在时由后端托管）
-  const webDist = path.resolve(config.rootDir, '../web/dist');
-  if (fs.existsSync(webDist)) {
+  // 源码运行时是 server/ 与 web/ 平级；容器镜像里两者都放在 /app 下，所以两种布局都试一下
+  const webDist = [
+    path.resolve(config.rootDir, '../web/dist'),
+    path.resolve(config.rootDir, 'web/dist'),
+  ].find((dir) => fs.existsSync(path.join(dir, 'index.html')));
+  if (webDist) {
     app.use(express.static(webDist));
     app.get('*', (req, res, next) => {
       if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) return next();
