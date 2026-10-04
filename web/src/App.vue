@@ -12,7 +12,7 @@ import { api } from './api';
 const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
-const dark = ref(false);
+const dark = ref(true);
 const unread = ref(0);
 const scrolled = ref(false);
 const mobileOpen = ref(false);
@@ -71,9 +71,9 @@ async function onUserSelect(key: string) {
 onMounted(async () => {
   await auth.bootstrap();
   await loadUnread();
-  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
   const saved = localStorage.getItem('jnctf-theme');
-  dark.value = saved ? saved === 'dark' : prefersDark;
+  // 靶场终端风格默认深色
+  dark.value = saved ? saved === 'dark' : true;
   document.documentElement.classList.toggle('dark', dark.value);
 
   window.addEventListener('scroll', () => {
@@ -176,27 +176,14 @@ function toggleTheme() {
             <!-- 页脚 -->
             <footer class="app-footer">
               <div class="app-footer-inner">
-                <div class="footer-brand">
-                  <span class="brand-mark small">J</span>
-                  <div>
-                    <div class="footer-title">{{ auth.siteName }}</div>
-                    <div class="footer-desc">{{ auth.meta?.settings['site.description'] }}</div>
-                  </div>
-                </div>
-                <div class="footer-links">
-                  <RouterLink to="/challenges">题目</RouterLink>
-                  <RouterLink to="/competitions">比赛</RouterLink>
-                  <RouterLink to="/scoreboard">榜单</RouterLink>
-                  <a v-if="auth.githubUrl" :href="auth.githubUrl" target="_blank" rel="noreferrer">开源仓库</a>
-                </div>
-                <div class="footer-copy">
-                  <a v-if="auth.githubUrl" :href="auth.githubUrl" target="_blank" rel="noreferrer">Powered by JNCTF</a>
-                  <span v-else>Powered by JNCTF</span>
+                <a v-if="auth.githubUrl" :href="auth.githubUrl" target="_blank" rel="noreferrer">Powered by JNCTF</a>
+                <span v-else>Powered by JNCTF</span>
+                <span class="sep">·</span>
+                <span>© 2026 X4CE</span>
+                <template v-if="auth.meta?.settings['site.icp']">
                   <span class="sep">·</span>
-                  <span>© 2026 X4CE</span>
-                  <span v-if="auth.meta?.settings['site.icp']" class="sep">·</span>
-                  <span v-if="auth.meta?.settings['site.icp']">{{ auth.meta.settings['site.icp'] }}</span>
-                </div>
+                  <span>{{ auth.meta.settings['site.icp'] }}</span>
+                </template>
               </div>
             </footer>
           </div>

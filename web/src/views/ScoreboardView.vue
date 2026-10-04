@@ -10,7 +10,7 @@ const items = ref<any[]>([]);
 
 const podium = computed(() => items.value.slice(0, 3));
 const rest = computed(() => items.value.slice(3));
-const medals = ['🥇', '🥈', '🥉'];
+const medals = ['01', '02', '03'];
 
 async function load() {
   loading.value = true;
@@ -28,8 +28,8 @@ onMounted(load);
 
 <template>
   <div class="jk-page">
-    <header class="jk-head">
-      <span class="jk-head-icon">🏆</span>
+      <header class="jk-head">
+      <span class="jk-head-icon">#</span>
       <div>
         <h1>排行榜</h1>
         <p>共 {{ items.length }} 位{{ type === 'user' ? '选手' : '队伍' }}，同分按最后解出时间排序</p>
@@ -44,8 +44,8 @@ onMounted(load);
 
     <n-spin :show="loading">
       <div v-if="!items.length && !loading" class="jk-empty">
-        <div class="jk-empty-icon">🏅</div>
-        <div>还没有人解出题目</div>
+        <div class="jk-empty-icon">□</div>
+        <div>// 还没有人解出题目</div>
       </div>
 
       <template v-else>
@@ -59,7 +59,7 @@ onMounted(load);
                   {{ entry.name }}
                 </RouterLink>
               </div>
-              <div class="jk-podium-score">{{ entry.score }} 分 · {{ entry.solveCount }} 题</div>
+              <div class="jk-podium-score">{{ entry.score }} PTS · {{ entry.solveCount }} SOLVED</div>
             </div>
           </div>
         </div>

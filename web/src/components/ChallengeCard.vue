@@ -32,14 +32,14 @@ const score = computed(() => props.challenge.currentValue ?? props.challenge.sco
     </div>
 
     <div class="jk-chips">
-      <span class="jk-chip diff" :style="{ background: difficulty.color + '1f', color: difficulty.color }">
-        {{ difficulty.label }}
+      <span class="jk-chip diff" :style="{ background: difficulty.color + '1a', color: difficulty.color, borderColor: difficulty.color + '55' }">
+        {{ difficulty.short }}
       </span>
       <span v-if="showCategory && challenge.category" class="jk-chip">{{ challenge.category.name }}</span>
       <span v-for="tag in (challenge.tags ?? []).slice(0, 2)" :key="tag.id" class="jk-chip">#{{ tag.name }}</span>
-      <span v-if="challenge.requiresContainer" class="jk-chip" title="需要动态靶机">🐳 靶机</span>
-      <span v-if="challenge.fileCount" class="jk-chip">📎 {{ challenge.fileCount }}</span>
-      <span v-if="challenge.hintCount" class="jk-chip">💡 {{ challenge.hintCount }}</span>
+      <span v-if="challenge.requiresContainer" class="jk-chip" title="需要动态靶机">DOCKER</span>
+      <span v-if="challenge.fileCount" class="jk-chip">FILE {{ challenge.fileCount }}</span>
+      <span v-if="challenge.hintCount" class="jk-chip">HINT {{ challenge.hintCount }}</span>
     </div>
   </RouterLink>
 </template>
