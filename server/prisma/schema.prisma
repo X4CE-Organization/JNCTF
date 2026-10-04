@@ -1,0 +1,846 @@
+// ---------------------------------------------------------------------------
+// JNCTF 数据模型
+//
+// 表结构由 Prisma Migrate 管理：改完这个文件跑 `npm run prisma:migrate`，
+// 会生成一个新迁移并更新数据库，历史迁移不要改动。
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------- 用户与权限
+
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  PENDING
+  BANNED
+}
+
+model User {
+  id           BigInt     @id @default(autoincrement())
+  username     String     @unique @db.VarChar(32)
+  email        String?    @unique @db.VarChar(128)
+  passwordHash String     @map("password_hash")
+  displayName  String?    @map("display_name") @db.VarChar(48)
+  avatar       String?    @db.VarChar(512)
+  bio          String?    @db.VarChar(512)
+  website      String?    @db.VarChar(128)
+  country      String?    @db.VarChar(64)
+  organization String?    @db.VarChar(64)
+
+  role           Role       @default(USER)
+  status         UserStatus @default(ACTIVE)
+  score          Int        @default(0)
+  emailVerified  Boolean    @default(false) @map("email_verified")
+  totpSecret     String?    @map("totp_secret") @db.VarChar(64)
+  totpEnabled    Boolean    @default(false) @map("totp_enabled")
+  hidden         Boolean    @default(false)
+  banned         Boolean    @default(false)
+  banReason      String?    @map("ban_reason") @db.VarChar(255)
+  lastLoginAt    DateTime?  @map("last_login_at")
+  lastLoginIp    String?    @map("last_login_ip") @db.VarChar(64)
+  locale         String     @default("zh-CN") @db.VarChar(8)
+  newsletter     Boolean    @default(false)
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  teamMember       TeamMember?
+  createdTeams     Team[]                  @relation("TeamCaptain")
+  submissions      Submission[]
+  solves           Solve[]
+  hintUnlocks      HintUnlock[]
+  instances        ChallengeInstance[]
+  writeups         Writeup[]
+  notifications    Notification[]
+  tickets          Ticket[]                @relation("TicketOwner")
+  assignedTickets  Ticket[]                @relation("TicketAssignee")
+  ticketMessages   TicketMessage[]
+  apiTokens        ApiToken[]
+  pointLogs        PointLog[]
+  attachments      Attachment[]
+  registrations    CompetitionParticipant[]
+  awxAttacks       AwxAttack[]             @relation("AwxAttacker")
+  authoredChallenges Challenge[]           @relation("ChallengeAuthor")
+
+  @@index([score])
+  @@map("users")
+}
+
+model Team {
+  id          BigInt   @id @default(autoincrement())
+  name        String   @unique @db.VarChar(48)
+  affiliation String?  @db.VarChar(32)
+  description String?  @db.VarChar(1000)
+  avatar      String?  @db.VarChar(512)
+  website     String?  @db.VarChar(128)
+  inviteCode  String?  @unique @map("invite_code") @db.VarChar(32)
+  openJoin    Boolean  @default(true) @map("open_join")
+  score       Int      @default(0)
+  hidden      Boolean  @default(false)
+  locked      Boolean  @default(false)
+  banned      Boolean  @default(false)
+  captainId   BigInt   @map("captain_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  captain     User              @relation("TeamCaptain", fields: [captainId], references: [id], onDelete: Cascade)
+  members     TeamMember[]
+  invites     TeamInvite[]
+  solves      Solve[]
+  submissions Submission[]
+  instances   ChallengeInstance[]
+  registrations CompetitionParticipant[]
+  awxTargets  AwxTarget[]
+  awxFlags    AwxFlag[]
+  awxChecks   AwxCheck[]
+
+  @@index([score])
+  @@map("teams")
+}
+
+model TeamMember {
+  id       BigInt   @id @default(autoincrement())
+  teamId   BigInt   @map("team_id")
+  userId   BigInt   @unique @map("user_id")
+  captain  Boolean  @default(false)
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("team_members")
+}
+
+model TeamInvite {
+  id           BigInt    @id @default(autoincrement())
+  teamId       BigInt    @map("team_id")
+  code         String    @unique @db.VarChar(32)
+  targetUserId BigInt?   @map("target_user_id")
+  createdBy    BigInt    @map("created_by")
+  expiresAt    DateTime? @map("expires_at")
+  usedBy       BigInt?   @map("used_by")
+  usedAt       DateTime? @map("used_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("team_invites")
+}
+
+// -------------------------------------------------------------------- 题目
+
+enum ChallengeState {
+  VISIBLE
+  HIDDEN
+  CLOSED
+}
+
+enum ScoringType {
+  STATIC
+  DYNAMIC
+}
+
+enum FlagType {
+  STATIC
+  REGEX
+  DYNAMIC
+}
+
+enum Difficulty {
+  BEGINNER
+  EASY
+  MEDIUM
+  HARD
+  INSANE
+}
+
+model Category {
+  id          BigInt  @id @default(autoincrement())
+  name        String  @db.VarChar(48)
+  slug        String  @unique @db.VarChar(48)
+  description String? @db.VarChar(255)
+  icon        String? @db.VarChar(32)
+  color       String? @db.VarChar(16)
+  sortOrder   Int     @default(0) @map("sort_order")
+  visible     Boolean @default(true)
+
+  challenges Challenge[]
+
+  @@map("categories")
+}
+
+model Challenge {
+  id                BigInt         @id @default(autoincrement())
+  title             String         @db.VarChar(160)
+  description       String?
+  hintPreview       String?        @map("hint_preview")
+  categoryId        BigInt?        @map("category_id")
+  difficulty        Difficulty     @default(EASY)
+  state             ChallengeState @default(VISIBLE)
+  scoringType       ScoringType    @default(STATIC) @map("scoring_type")
+  score             Int            @default(100)
+  minScore          Int            @default(20) @map("min_score")
+  decay             Int            @default(30)
+  authorId          BigInt?        @map("author_id")
+  solveCount        Int            @default(0) @map("solve_count")
+  attemptCount      Int            @default(0) @map("attempt_count")
+  maxAttempts       Int            @default(0) @map("max_attempts")
+  requiresContainer Boolean        @default(false) @map("requires_container")
+  dockerImage       String?        @map("docker_image") @db.VarChar(255)
+  containerPort     Int?           @map("container_port")
+  connectionType    String         @default("tcp") @map("connection_type") @db.VarChar(16)
+  connectionInfo    String?        @map("connection_info")
+  cpuLimit          String         @default("0.5") @map("cpu_limit") @db.VarChar(16)
+  memoryLimitMb     Int            @default(256) @map("memory_limit_mb")
+  instanceTtlSeconds Int           @default(3600) @map("instance_ttl_seconds")
+  allowDownload     Boolean        @default(true) @map("allow_download")
+  allowWriteup      Boolean        @default(true) @map("allow_writeup")
+  sortOrder         Int            @default(0) @map("sort_order")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  category      Category?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  author        User?                @relation("ChallengeAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  flags         ChallengeFlag[]
+  files         ChallengeFile[]
+  hints         Hint[]
+  tags          ChallengeTag[]
+  submissions   Submission[]
+  solves        Solve[]
+  instances     ChallengeInstance[]
+  writeups      Writeup[]
+  competitions  CompetitionChallenge[]
+  awxServices   AwxService[]
+
+  @@index([categoryId])
+  @@index([state])
+  @@map("challenges")
+}
+
+model ChallengeFlag {
+  id            BigInt   @id @default(autoincrement())
+  challengeId   BigInt   @map("challenge_id")
+  flag          String   @db.VarChar(512)
+  type          FlagType @default(STATIC)
+  caseSensitive Boolean  @default(true) @map("case_sensitive")
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@map("challenge_flags")
+}
+
+model ChallengeFile {
+  id          BigInt   @id @default(autoincrement())
+  challengeId BigInt   @map("challenge_id")
+  filename    String   @db.VarChar(255)
+  url         String   @db.VarChar(512)
+  size        BigInt   @default(0)
+  sha256      String?  @db.VarChar(64)
+  downloads   Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@map("challenge_files")
+}
+
+model Hint {
+  id          BigInt @id @default(autoincrement())
+  challengeId BigInt @map("challenge_id")
+  content     String
+  cost        Int    @default(0)
+  deductFromChallenge Boolean @default(true) @map("deduct_from_challenge")
+  sortOrder   Int    @default(0) @map("sort_order")
+
+  challenge Challenge    @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  unlocks   HintUnlock[]
+
+  @@map("hints")
+}
+
+model HintUnlock {
+  id        BigInt   @id @default(autoincrement())
+  hintId    BigInt   @map("hint_id")
+  userId    BigInt   @map("user_id")
+  teamId    BigInt?  @map("team_id")
+  cost      Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  hint Hint @relation(fields: [hintId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([hintId, userId])
+  @@map("hint_unlocks")
+}
+
+model Tag {
+  id         BigInt @id @default(autoincrement())
+  name       String @unique @db.VarChar(48)
+  color      String? @db.VarChar(16)
+  usageCount Int    @default(0) @map("usage_count")
+
+  challenges ChallengeTag[]
+
+  @@map("tags")
+}
+
+model ChallengeTag {
+  id          BigInt @id @default(autoincrement())
+  challengeId BigInt @map("challenge_id")
+  tagId       BigInt @map("tag_id")
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  tag       Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, tagId])
+  @@map("challenge_tags")
+}
+
+// -------------------------------------------------------------------- 答题
+
+enum SubmissionStatus {
+  CORRECT
+  WRONG
+  DUPLICATE
+  RATE_LIMITED
+  CLOSED
+}
+
+model Submission {
+  id            BigInt           @id @default(autoincrement())
+  challengeId   BigInt           @map("challenge_id")
+  userId        BigInt           @map("user_id")
+  teamId        BigInt?          @map("team_id")
+  competitionId BigInt?          @map("competition_id")
+  flag          String           @db.VarChar(512)
+  status        SubmissionStatus
+  score         Int              @default(0)
+  ip            String?          @db.VarChar(64)
+  userAgent     String?          @map("user_agent") @db.VarChar(255)
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team      Team?     @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@index([userId, id])
+  @@index([challengeId, id])
+  @@index([competitionId, id])
+  @@map("submissions")
+}
+
+model Solve {
+  id            BigInt   @id @default(autoincrement())
+  challengeId   BigInt   @map("challenge_id")
+  userId        BigInt   @map("user_id")
+  teamId        BigInt?  @map("team_id")
+  competitionId BigInt   @default(0) @map("competition_id")
+  score         Int
+  firstBlood    Boolean  @default(false) @map("first_blood")
+  secondBlood   Boolean  @default(false) @map("second_blood")
+  thirdBlood    Boolean  @default(false) @map("third_blood")
+  solveSeconds  BigInt?  @map("solve_seconds")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team      Team?     @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, challengeId, competitionId])
+  @@index([challengeId])
+  @@index([competitionId])
+  @@map("solves")
+}
+
+// -------------------------------------------------------------------- 比赛
+
+enum CompetitionType {
+  JEOPARDY
+  AWD
+  MIXED
+}
+
+enum CompetitionState {
+  DRAFT
+  PUBLISHED
+  RUNNING
+  FROZEN
+  ENDED
+}
+
+enum TeamMode {
+  SOLO
+  TEAM
+  BOTH
+}
+
+enum ParticipantStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Competition {
+  id                 BigInt           @id @default(autoincrement())
+  name               String           @db.VarChar(160)
+  subtitle           String?          @db.VarChar(255)
+  slug               String           @unique @db.VarChar(16)
+  description        String?
+  rules              String?
+  banner             String?          @db.VarChar(512)
+  type               CompetitionType  @default(JEOPARDY)
+  state              CompetitionState @default(DRAFT)
+  teamMode           TeamMode         @default(BOTH) @map("team_mode")
+  startAt            DateTime         @map("start_at")
+  endAt              DateTime         @map("end_at")
+  freezeAt           DateTime?        @map("freeze_at")
+  published          Boolean          @default(false)
+  joinPassword       String?          @map("join_password") @db.VarChar(64)
+  maxParticipants    Int              @default(0) @map("max_participants")
+  minTeamSize        Int              @default(1) @map("min_team_size")
+  maxTeamSize        Int              @default(4) @map("max_team_size")
+  needApproval       Boolean          @default(false) @map("need_approval")
+  hideScoreboard     Boolean          @default(false) @map("hide_scoreboard")
+  hideChallenges     Boolean          @default(false) @map("hide_challenges")
+  practiceAfter      Boolean          @default(true) @map("practice_after")
+  awdRoundSeconds    Int              @default(300) @map("awd_round_seconds")
+  awdAttackScore     Int              @default(50) @map("awd_attack_score")
+  awdDefensePenalty  Int              @default(50) @map("awd_defense_penalty")
+  awdBaseScore       Int              @default(20) @map("awd_base_score")
+  createdBy          BigInt?          @map("created_by")
+  createdAt          DateTime         @default(now()) @map("created_at")
+
+  challenges    CompetitionChallenge[]
+  participants  CompetitionParticipant[]
+  announcements CompetitionAnnouncement[]
+  awxRounds     AwxRound[]
+  awxServices   AwxService[]
+
+  @@index([startAt, endAt])
+  @@map("competitions")
+}
+
+model CompetitionChallenge {
+  id            BigInt @id @default(autoincrement())
+  competitionId BigInt @map("competition_id")
+  challengeId   BigInt @map("challenge_id")
+  sortOrder     Int    @default(0) @map("sort_order")
+  customScore   Int?   @map("custom_score")
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  challenge   Challenge   @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([competitionId, challengeId])
+  @@map("competition_challenges")
+}
+
+model CompetitionParticipant {
+  id            BigInt            @id @default(autoincrement())
+  competitionId BigInt            @map("competition_id")
+  userId        BigInt            @map("user_id")
+  teamId        BigInt?           @map("team_id")
+  status        ParticipantStatus @default(APPROVED)
+  score         Int               @default(0)
+  lastSolveAt   DateTime?         @map("last_solve_at")
+  banned        Boolean           @default(false)
+  registeredAt  DateTime          @default(now()) @map("registered_at")
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team        Team?       @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@unique([competitionId, userId])
+  @@map("competition_participants")
+}
+
+model CompetitionAnnouncement {
+  id            BigInt   @id @default(autoincrement())
+  competitionId BigInt   @map("competition_id")
+  title         String   @db.VarChar(200)
+  content       String
+  createdBy     BigInt?  @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  @@map("competition_announcements")
+}
+
+// -------------------------------------------------------------- 动态靶机
+
+enum InstanceStatus {
+  CREATING
+  RUNNING
+  STOPPED
+  EXPIRED
+  FAILED
+}
+
+model ChallengeInstance {
+  id            BigInt         @id @default(autoincrement())
+  challengeId   BigInt         @map("challenge_id")
+  userId        BigInt         @map("user_id")
+  teamId        BigInt?        @map("team_id")
+  competitionId BigInt         @default(0) @map("competition_id")
+  containerId   String?        @map("container_id") @db.VarChar(128)
+  host          String?        @db.VarChar(128)
+  port          Int?
+  status        InstanceStatus @default(CREATING)
+  errorMessage  String?        @map("error_message") @db.VarChar(500)
+  instanceFlag  String?        @map("instance_flag") @db.VarChar(512)
+  expiresAt     DateTime?      @map("expires_at")
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team      Team?     @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@index([userId, challengeId])
+  @@index([status])
+  @@map("challenge_instances")
+}
+
+// --------------------------------------------------------------------- AWD
+
+enum AwxRoundState {
+  PENDING
+  RUNNING
+  FINISHED
+  SETTLED
+}
+
+model AwxRound {
+  id            BigInt        @id @default(autoincrement())
+  competitionId BigInt        @map("competition_id")
+  roundNo       Int           @map("round_no")
+  startAt       DateTime      @map("start_at")
+  endAt         DateTime      @map("end_at")
+  state         AwxRoundState @default(PENDING)
+  settled       Boolean       @default(false)
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  flags       AwxFlag[]
+  checks      AwxCheck[]
+  attacks     AwxAttack[]
+
+  @@unique([competitionId, roundNo])
+  @@map("awx_rounds")
+}
+
+model AwxService {
+  id            BigInt  @id @default(autoincrement())
+  competitionId BigInt  @map("competition_id")
+  challengeId   BigInt? @map("challenge_id")
+  name          String  @db.VarChar(120)
+  description   String?
+  dockerImage   String  @map("docker_image") @db.VarChar(255)
+  internalPort  Int     @map("internal_port")
+  protocol      String  @default("tcp") @db.VarChar(16)
+  resetCommand  String? @map("reset_command") @db.VarChar(512)
+  flagEnv       String  @default("FLAG") @map("flag_env") @db.VarChar(64)
+  flagFile      String? @map("flag_file") @db.VarChar(255)
+  flagTemplate  String  @default("flag{{{random}}}") @map("flag_template") @db.VarChar(255)
+  checkPath     String? @map("check_path") @db.VarChar(255)
+  checkerScript String? @map("checker_script")
+  baseScore     Int     @default(0) @map("base_score")
+  cpuLimit      String  @default("1") @map("cpu_limit") @db.VarChar(16)
+  memoryLimitMb Int     @default(512) @map("memory_limit_mb")
+  sortOrder     Int     @default(0) @map("sort_order")
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  challenge   Challenge?  @relation(fields: [challengeId], references: [id], onDelete: SetNull)
+  targets     AwxTarget[]
+  checks      AwxCheck[]
+  attacks     AwxAttack[]
+
+  @@map("awx_services")
+}
+
+model AwxTarget {
+  id            BigInt         @id @default(autoincrement())
+  competitionId BigInt         @map("competition_id")
+  awxServiceId  BigInt         @map("awx_service_id")
+  teamId        BigInt         @map("team_id")
+  containerId   String?        @map("container_id") @db.VarChar(128)
+  host          String?        @db.VarChar(128)
+  port          Int?
+  status        InstanceStatus @default(CREATING)
+  errorMessage  String?        @map("error_message") @db.VarChar(500)
+  currentFlag   String?        @map("current_flag") @db.VarChar(512)
+  failStreak    Int            @default(0) @map("fail_streak")
+  alive         Boolean        @default(true)
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  awxService AwxService @relation(fields: [awxServiceId], references: [id], onDelete: Cascade)
+  team       Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  flags      AwxFlag[]
+  attackedBy AwxAttack[]
+
+  @@unique([awxServiceId, teamId])
+  @@map("awx_targets")
+}
+
+model AwxFlag {
+  id             BigInt   @id @default(autoincrement())
+  roundId        BigInt   @map("round_id")
+  competitionId  BigInt   @map("competition_id")
+  targetId       BigInt   @map("target_id")
+  teamId         BigInt   @map("team_id")
+  flag           String   @unique @db.VarChar(512)
+  capturedCount  Int      @default(0) @map("captured_count")
+  expired        Boolean  @default(false)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  round  AwxRound  @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  target AwxTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  team   Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([flag])
+  @@index([roundId])
+  @@map("awx_flags")
+}
+
+model AwxCheck {
+  id           BigInt   @id @default(autoincrement())
+  roundId      BigInt   @map("round_id")
+  competitionId BigInt  @map("competition_id")
+  awxServiceId BigInt   @map("awx_service_id")
+  teamId       BigInt   @map("team_id")
+  passed       Boolean
+  delta        Int      @default(0)
+  message      String?  @db.VarChar(500)
+  durationMs   Int?     @map("duration_ms")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  round      AwxRound   @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  awxService AwxService @relation(fields: [awxServiceId], references: [id], onDelete: Cascade)
+  team       Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([roundId, teamId])
+  @@map("awx_checks")
+}
+
+model AwxAttack {
+  id             BigInt   @id @default(autoincrement())
+  roundId        BigInt   @map("round_id")
+  competitionId  BigInt   @map("competition_id")
+  attackerTeamId BigInt   @map("attacker_team_id")
+  attackerUserId BigInt?  @map("attacker_user_id")
+  victimTargetId BigInt   @map("victim_target_id")
+  victimTeamId   BigInt   @map("victim_team_id")
+  awxServiceId   BigInt   @map("awx_service_id")
+  flag           String   @db.VarChar(512)
+  attackerDelta  Int      @map("attacker_delta")
+  victimDelta    Int      @map("victim_delta")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  round      AwxRound   @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  awxService AwxService @relation(fields: [awxServiceId], references: [id], onDelete: Cascade)
+  target     AwxTarget  @relation(fields: [victimTargetId], references: [id], onDelete: Cascade)
+  attacker   User?      @relation("AwxAttacker", fields: [attackerUserId], references: [id], onDelete: SetNull)
+
+  @@index([roundId])
+  @@index([competitionId])
+  @@map("awx_attacks")
+}
+
+// ------------------------------------------------------------- 社区与运营
+
+enum WriteupState {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Writeup {
+  id           BigInt       @id @default(autoincrement())
+  challengeId  BigInt       @map("challenge_id")
+  userId       BigInt       @map("user_id")
+  title        String       @db.VarChar(200)
+  content      String?
+  url          String?      @db.VarChar(512)
+  state        WriteupState @default(PENDING)
+  rejectReason String?      @map("reject_reason") @db.VarChar(255)
+  likes        Int          @default(0)
+  views        Int          @default(0)
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([challengeId])
+  @@map("writeups")
+}
+
+model Announcement {
+  id          BigInt   @id @default(autoincrement())
+  title       String   @db.VarChar(200)
+  content     String
+  level       String   @default("INFO") @db.VarChar(16)
+  pinned      Boolean  @default(false)
+  visible     Boolean  @default(true)
+  createdBy   BigInt?  @map("created_by")
+  publishedAt DateTime @default(now()) @map("published_at")
+
+  @@map("announcements")
+}
+
+model Notification {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  type      String   @db.VarChar(32)
+  title     String   @db.VarChar(200)
+  content   String?  @db.VarChar(1000)
+  link      String?  @db.VarChar(255)
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, id])
+  @@map("notifications")
+}
+
+enum TicketStatus {
+  OPEN
+  PENDING
+  RESOLVED
+  CLOSED
+}
+
+model Ticket {
+  id          BigInt       @id @default(autoincrement())
+  subject     String       @db.VarChar(200)
+  category    String       @default("OTHER") @db.VarChar(32)
+  priority    String       @default("NORMAL") @db.VarChar(16)
+  status      TicketStatus @default(OPEN)
+  userId      BigInt       @map("user_id")
+  assigneeId  BigInt?      @map("assignee_id")
+  refType     String?      @map("ref_type") @db.VarChar(32)
+  refId       BigInt?      @map("ref_id")
+  lastReplyAt DateTime?    @map("last_reply_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  user     User            @relation("TicketOwner", fields: [userId], references: [id], onDelete: Cascade)
+  assignee User?           @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  messages TicketMessage[]
+
+  @@index([status, id])
+  @@map("tickets")
+}
+
+model TicketMessage {
+  id        BigInt   @id @default(autoincrement())
+  ticketId  BigInt   @map("ticket_id")
+  userId    BigInt   @map("user_id")
+  content   String
+  internal  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, id])
+  @@map("ticket_messages")
+}
+
+// ------------------------------------------------------------------ 系统
+
+model AuditLog {
+  id         BigInt   @id @default(autoincrement())
+  actorId    BigInt?  @map("actor_id")
+  actorName  String?  @map("actor_name") @db.VarChar(64)
+  action     String   @db.VarChar(64)
+  targetType String?  @map("target_type") @db.VarChar(32)
+  targetId   String?  @map("target_id")
+  detail     String?  @db.VarChar(1000)
+  ip         String?  @db.VarChar(64)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([id(sort: Desc)])
+  @@map("audit_logs")
+}
+
+model Setting {
+  key       String   @id @db.VarChar(64)
+  value     String?
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+model ApiToken {
+  id         BigInt    @id @default(autoincrement())
+  userId     BigInt    @map("user_id")
+  name       String    @db.VarChar(64)
+  tokenHash  String    @unique @map("token_hash") @db.VarChar(128)
+  prefix     String?   @db.VarChar(16)
+  scopes     String?   @db.VarChar(255)
+  lastUsedAt DateTime? @map("last_used_at")
+  expiresAt  DateTime? @map("expires_at")
+  revoked    Boolean   @default(false)
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@map("api_tokens")
+}
+
+model PointLog {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  delta     Int
+  balance   Int
+  reason    String   @db.VarChar(120)
+  refType   String?  @map("ref_type") @db.VarChar(32)
+  refId     BigInt?  @map("ref_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, id])
+  @@map("point_logs")
+}
+
+model Attachment {
+  id          BigInt   @id @default(autoincrement())
+  filename    String   @db.VarChar(255)
+  path        String   @db.VarChar(512)
+  url         String   @db.VarChar(512)
+  contentType String?  @map("content_type") @db.VarChar(128)
+  size        BigInt   @default(0)
+  sha256      String?  @db.VarChar(64)
+  userId      BigInt?  @map("user_id")
+  scope       String   @default("other") @db.VarChar(32)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("attachments")
+}
+
+model LoginLog {
+  id         BigInt   @id @default(autoincrement())
+  userId     BigInt?  @map("user_id")
+  username   String   @db.VarChar(64)
+  ip         String?  @db.VarChar(64)
+  userAgent  String?  @map("user_agent") @db.VarChar(255)
+  success    Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId, id])
+  @@map("login_logs")
+}
