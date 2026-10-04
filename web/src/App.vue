@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { RouterView, useRoute, useRouter } from 'vue-router';
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router';
 import {
-  NAvatar, NBadge, NButton, NConfigProvider, NDialogProvider, NDropdown, NLayout, NLayoutContent,
-  NLayoutHeader, NMenu, NMessageProvider, NNotificationProvider, NSpace, darkTheme, zhCN, dateZhCN,
+  NAvatar, NBadge, NButton, NConfigProvider, NDialogProvider, NDropdown, NMessageProvider,
+  NNotificationProvider, darkTheme, zhCN, dateZhCN,
 } from 'naive-ui';
-import type { MenuOption } from 'naive-ui';
-import { h } from 'vue';
 import { useAuthStore } from './stores/auth';
-import { themeOverrides } from './theme';
+import { themeOverrides, darkThemeOverrides } from './theme';
 import { api } from './api';
 
 const auth = useAuthStore();
@@ -16,29 +14,31 @@ const router = useRouter();
 const route = useRoute();
 const dark = ref(false);
 const unread = ref(0);
+const scrolled = ref(false);
+const mobileOpen = ref(false);
 
-const menuOptions = computed<MenuOption[]>(() => {
-  const items: MenuOption[] = [
-    { label: '首页', key: '/' },
-    { label: '题目', key: '/challenges' },
-    { label: '比赛', key: '/competitions' },
-    { label: '榜单', key: '/scoreboard' },
-    { label: '团队', key: '/teams' },
-    { label: '题解', key: '/writeups' },
-  ];
-  if (auth.isAdmin) items.push({ label: '管理后台', key: '/admin' });
-  return items;
-});
+const NAV = [
+  { to: '/challenges', label: '题目' },
+  { to: '/competitions', label: '比赛' },
+  { to: '/scoreboard', label: '榜单' },
+  { to: '/teams', label: '团队' },
+  { to: '/writeups', label: '题解' },
+];
 
 const userOptions = computed(() => [
   { label: '个人主页', key: 'profile' },
-  { label: '题解', key: 'writeups' },
-  { label: '工单', key: 'tickets' },
-  { label: `消息${unread.value ? `（${unread.value}）` : ''}`, key: 'notifications' },
-  { label: '设置', key: 'settings' },
+  { label: '我的题解', key: 'writeups' },
+  { label: '我的工单', key: 'tickets' },
+  { label: `消息中心${unread.value ? `（${unread.value}）` : ''}`, key: 'notifications' },
+  { label: '个人设置', key: 'settings' },
+  ...(auth.isAdmin ? [{ label: '管理后台', key: 'admin' }] : []),
   { type: 'divider', key: 'd1' },
   { label: '退出登录', key: 'logout' },
 ]);
+
+function isActive(path: string): boolean {
+  return route.path === path || route.path.startsWith(`${path}/`);
+}
 
 async function loadUnread() {
   if (!auth.isLogin) {
@@ -47,7 +47,7 @@ async function loadUnread() {
   }
   unread.value = await api
     .get<{ unread: number }>('/api/notifications/unread-count')
-    .then((data) => data.unread)
+    .then((d) => d.unread)
     .catch(() => 0);
 }
 
@@ -63,6 +63,7 @@ async function onUserSelect(key: string) {
     tickets: '/tickets',
     notifications: '/notifications',
     settings: '/settings',
+    admin: '/admin',
   };
   if (map[key]) router.push(map[key]);
 }
@@ -70,80 +71,135 @@ async function onUserSelect(key: string) {
 onMounted(async () => {
   await auth.bootstrap();
   await loadUnread();
-  dark.value = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+  const saved = localStorage.getItem('jnctf-theme');
+  dark.value = saved ? saved === 'dark' : prefersDark;
+  document.documentElement.classList.toggle('dark', dark.value);
+
+  window.addEventListener('scroll', () => {
+    scrolled.value = window.scrollY > 8;
+  }, { passive: true });
+
   setInterval(loadUnread, 60_000);
 });
+
+function toggleTheme() {
+  dark.value = !dark.value;
+  localStorage.setItem('jnctf-theme', dark.value ? 'dark' : 'light');
+  document.documentElement.classList.toggle('dark', dark.value);
+}
 </script>
 
 <template>
-  <n-config-provider :theme="dark ? darkTheme : null" :theme-overrides="themeOverrides" :locale="zhCN" :date-locale="dateZhCN">
+  <n-config-provider
+    :theme="dark ? darkTheme : null"
+    :theme-overrides="dark ? darkThemeOverrides : themeOverrides"
+    :locale="zhCN"
+    :date-locale="dateZhCN"
+  >
     <n-message-provider>
       <n-notification-provider>
         <n-dialog-provider>
-          <n-layout class="min-h-screen">
-            <n-layout-header bordered class="sticky top-0 z-40 backdrop-blur">
-              <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
-                <RouterLink to="/" class="flex items-center gap-2.5">
-                  <img v-if="auth.siteLogo" :src="auth.siteLogo" class="h-8 w-8 rounded-lg object-cover" alt="" />
-                  <span v-else class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-400 text-sm font-black text-white">
-                    J
-                  </span>
-                  <span class="text-lg font-bold tracking-tight">{{ auth.siteName }}</span>
+          <div class="app-shell">
+            <!-- 顶栏 -->
+            <header class="app-header" :class="scrolled ? 'is-scrolled' : ''">
+              <div class="app-header-inner">
+                <RouterLink to="/" class="brand" @click="mobileOpen = false">
+                  <img v-if="auth.siteLogo" :src="auth.siteLogo" class="brand-logo" alt="" />
+                  <span v-else class="brand-mark">J</span>
+                  <span class="brand-name">{{ auth.siteName }}</span>
                 </RouterLink>
 
-                <n-menu
-                  mode="horizontal"
-                  :options="menuOptions"
-                  :value="route.path"
-                  class="flex-1"
-                  @update:value="(key: string) => router.push(key)"
-                />
+                <nav class="nav">
+                  <RouterLink
+                    v-for="item in NAV"
+                    :key="item.to"
+                    :to="item.to"
+                    class="nav-item"
+                    :class="isActive(item.to) ? 'is-active' : ''"
+                  >
+                    {{ item.label }}
+                  </RouterLink>
+                  <RouterLink v-if="auth.isAdmin" to="/admin" class="nav-item" :class="isActive('/admin') ? 'is-active' : ''">
+                    后台
+                  </RouterLink>
+                </nav>
 
-                <n-space align="center" :size="12">
-                  <n-button quaternary circle @click="dark = !dark">
+                <div class="header-actions">
+                  <button class="icon-btn" :title="dark ? '切换到浅色' : '切换到深色'" @click="toggleTheme">
                     {{ dark ? '☀' : '☾' }}
-                  </n-button>
+                  </button>
+
                   <template v-if="auth.isLogin">
-                    <RouterLink to="/notifications">
-                      <n-badge :value="unread" :max="99" :show="unread > 0">
-                        <n-button quaternary circle>🔔</n-button>
+                    <RouterLink to="/notifications" class="icon-btn" title="消息中心">
+                      <n-badge :value="unread" :max="99" :show="unread > 0" :offset="[4, -2]">
+                        <span class="bell">🔔</span>
                       </n-badge>
                     </RouterLink>
-                    <n-dropdown :options="userOptions" trigger="click" @select="onUserSelect">
-                      <div class="flex cursor-pointer items-center gap-2">
-                        <n-avatar round :size="32" :src="auth.user?.avatar || undefined">
+                    <n-dropdown :options="userOptions" trigger="click" placement="bottom-end" @select="onUserSelect">
+                      <button class="user-chip">
+                        <n-avatar round :size="30" :src="auth.user?.avatar || undefined">
                           {{ (auth.user?.displayName || '?').slice(0, 1) }}
                         </n-avatar>
-                        <div class="hidden text-sm leading-tight sm:block">
-                          <div class="font-medium">{{ auth.user?.displayName }}</div>
-                          <div class="text-xs opacity-60">{{ auth.user?.score }} 分</div>
-                        </div>
-                      </div>
+                        <span class="user-meta">
+                          <span class="user-name">{{ auth.user?.displayName }}</span>
+                          <span class="user-score">{{ auth.user?.score }} 分</span>
+                        </span>
+                      </button>
                     </n-dropdown>
                   </template>
                   <template v-else>
-                    <n-button quaternary @click="router.push('/login')">登录</n-button>
-                    <n-button type="primary" @click="router.push('/register')">注册</n-button>
+                    <RouterLink to="/login" class="ghost-link">登录</RouterLink>
+                    <RouterLink to="/register" class="cta-link">注册</RouterLink>
                   </template>
-                </n-space>
+
+                  <button class="icon-btn only-mobile" title="菜单" @click="mobileOpen = !mobileOpen">☰</button>
+                </div>
               </div>
-            </n-layout-header>
 
-            <n-layout-content class="mx-auto max-w-7xl px-4 py-6">
-              <RouterView />
-            </n-layout-content>
+              <nav v-if="mobileOpen" class="mobile-nav">
+                <RouterLink v-for="item in NAV" :key="item.to" :to="item.to" class="mobile-nav-item" @click="mobileOpen = false">
+                  {{ item.label }}
+                </RouterLink>
+              </nav>
+            </header>
 
-            <footer class="border-t py-8 text-center text-xs opacity-60">
-              <div class="mx-auto max-w-7xl px-4">
-                <a v-if="auth.githubUrl" :href="auth.githubUrl" target="_blank" rel="noreferrer" class="hover:underline">
-                  Powered by JNCTF
-                </a>
-                <span v-else>Powered by JNCTF</span>
-                <span class="mx-2">·</span>
-                <span>{{ auth.meta?.settings['site.description'] }}</span>
+            <!-- 内容 -->
+            <main class="app-main">
+              <RouterView v-slot="{ Component }">
+                <Transition name="fade" mode="out-in">
+                  <component :is="Component" />
+                </Transition>
+              </RouterView>
+            </main>
+
+            <!-- 页脚 -->
+            <footer class="app-footer">
+              <div class="app-footer-inner">
+                <div class="footer-brand">
+                  <span class="brand-mark small">J</span>
+                  <div>
+                    <div class="footer-title">{{ auth.siteName }}</div>
+                    <div class="footer-desc">{{ auth.meta?.settings['site.description'] }}</div>
+                  </div>
+                </div>
+                <div class="footer-links">
+                  <RouterLink to="/challenges">题目</RouterLink>
+                  <RouterLink to="/competitions">比赛</RouterLink>
+                  <RouterLink to="/scoreboard">榜单</RouterLink>
+                  <a v-if="auth.githubUrl" :href="auth.githubUrl" target="_blank" rel="noreferrer">开源仓库</a>
+                </div>
+                <div class="footer-copy">
+                  <a v-if="auth.githubUrl" :href="auth.githubUrl" target="_blank" rel="noreferrer">Powered by JNCTF</a>
+                  <span v-else>Powered by JNCTF</span>
+                  <span class="sep">·</span>
+                  <span>© 2026 X4CE</span>
+                  <span v-if="auth.meta?.settings['site.icp']" class="sep">·</span>
+                  <span v-if="auth.meta?.settings['site.icp']">{{ auth.meta.settings['site.icp'] }}</span>
+                </div>
               </div>
             </footer>
-          </n-layout>
+          </div>
         </n-dialog-provider>
       </n-notification-provider>
     </n-message-provider>

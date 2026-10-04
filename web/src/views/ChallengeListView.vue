@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { NCard, NInput, NSelect, NSpace, NSwitch, NEmpty, NSpin, NTag, NButton, NGrid, NGi } from 'naive-ui';
+import { NInput, NSelect, NSpin, NSwitch, NButton } from 'naive-ui';
 import { api, query } from '../api';
 import { useAuthStore } from '../stores/auth';
 import ChallengeCard from '../components/ChallengeCard.vue';
@@ -13,6 +13,7 @@ const keyword = ref('');
 const category = ref('');
 const difficulty = ref('');
 const onlyUnsolved = ref(false);
+const onlySolved = ref(false);
 
 const categoryOptions = computed(() => [
   { label: '全部分类', value: '' },
@@ -32,7 +33,13 @@ async function load() {
   loading.value = true;
   try {
     const data = await api.get<any>(
-      `/api/challenges${query({ keyword: keyword.value, category: category.value, difficulty: difficulty.value, unsolved: onlyUnsolved.value ? 'true' : '' })}`,
+      `/api/challenges${query({
+        keyword: keyword.value,
+        category: category.value,
+        difficulty: difficulty.value,
+        unsolved: onlyUnsolved.value ? 'true' : '',
+        solved: onlySolved.value ? 'true' : '',
+      })}`,
     );
     items.value = data.items ?? [];
     solvedCount.value = data.solvedCount ?? 0;
@@ -42,7 +49,7 @@ async function load() {
 }
 
 let timer: number | undefined;
-watch([category, difficulty, onlyUnsolved], load);
+watch([category, difficulty, onlyUnsolved, onlySolved], load);
 watch(keyword, () => {
   window.clearTimeout(timer);
   timer = window.setTimeout(load, 350);
@@ -51,29 +58,45 @@ onMounted(load);
 </script>
 
 <template>
-  <div class="space-y-4">
-    <n-card size="small">
-      <n-space align="center" :wrap="true">
-        <n-input v-model:value="keyword" placeholder="搜索题目" style="width: 220px" clearable />
-        <n-select v-model:value="category" :options="categoryOptions" style="width: 150px" />
-        <n-select v-model:value="difficulty" :options="difficultyOptions" style="width: 130px" />
-        <n-space align="center" :size="6">
-          <n-switch v-model:value="onlyUnsolved" size="small" />
-          <span class="text-sm">只看未解出</span>
-        </n-space>
-        <n-tag :bordered="false" class="ml-auto">
-          共 {{ items.length }} 题 · 已解出 {{ solvedCount }}
-        </n-tag>
-      </n-space>
-    </n-card>
+  <div class="jk-page">
+    <header class="jk-head">
+      <span class="jk-head-icon">🚩</span>
+      <div>
+        <h1>题目</h1>
+        <p>共 {{ items.length }} 道题，你已解出 {{ solvedCount }} 道</p>
+      </div>
+      <div class="jk-head-actions">
+        <n-button size="small" quaternary @click="onlyUnsolved = !onlyUnsolved; onlySolved = false">
+          {{ onlyUnsolved ? '显示全部' : '只看未解出' }}
+        </n-button>
+      </div>
+    </header>
+
+    <div class="jk-toolbar">
+      <n-input v-model:value="keyword" placeholder="搜索题目名" style="width: 220px" clearable />
+      <n-select v-model:value="category" :options="categoryOptions" style="width: 150px" />
+      <n-select v-model:value="difficulty" :options="difficultyOptions" style="width: 130px" />
+      <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--jk-text-2)">
+        <n-switch v-model:value="onlyUnsolved" size="small" @update:value="onlySolved = false" />
+        只看未解出
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--jk-text-2)">
+        <n-switch v-model:value="onlySolved" size="small" @update:value="onlyUnsolved = false" />
+        只看已解出
+      </div>
+    </div>
 
     <n-spin :show="loading">
-      <n-empty v-if="!items.length && !loading" description="没有符合条件的题目" class="py-16" />
-      <n-grid v-else :cols="3" :x-gap="12" :y-gap="12" responsive="screen" item-responsive>
-        <n-gi v-for="item in items" :key="item.id" span="3 s:3 m:1">
-          <ChallengeCard :challenge="item" show-category />
-        </n-gi>
-      </n-grid>
+      <div v-if="!items.length && !loading" class="jk-empty">
+        <div class="jk-empty-icon">🔍</div>
+        <div>没有符合条件的题目</div>
+        <n-button size="small" quaternary @click="keyword = ''; category = ''; difficulty = ''; onlyUnsolved = false; onlySolved = false">
+          清空筛选
+        </n-button>
+      </div>
+      <div v-else class="jk-grid">
+        <ChallengeCard v-for="item in items" :key="item.id" :challenge="item" show-category />
+      </div>
     </n-spin>
   </div>
 </template>
