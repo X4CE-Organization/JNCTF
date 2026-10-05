@@ -10,10 +10,6 @@ const loading = ref(false);
 const items = ref<any[]>([]);
 const breakdown = ref<any[]>([]);
 
-const podium = computed(() => items.value.slice(0, 3));
-const rest = computed(() => items.value.slice(3));
-/** 名次按后端算出来的 rank，并列时显示同一个名次 */
-const medal = (rank: number) => String(rank).padStart(2, '0');
 const breakdownChart = computed(() =>
   breakdown.value.map((c) => ({ name: c.name, value: c.solves, color: c.color || undefined })),
 );
@@ -57,7 +53,7 @@ onMounted(async () => {
       </div>
     </header>
 
-    <section v-if="podium.length" class="jk-panel">
+    <section v-if="items.length" class="jk-panel">
       <div class="jk-section"><h2>解题分布</h2><span class="count">按分类 · 共 {{ categoryTotal }} 题</span></div>
       <StatBarChart :items="breakdownChart" label="各分类解题数" />
     </section>
@@ -69,28 +65,11 @@ onMounted(async () => {
       </div>
 
       <template v-else>
-        <div class="jk-podium">
-          <div v-for="entry in podium" :key="entry.id" class="jk-podium-card" :class="`rank-${entry.rank}`">
-            <span class="jk-podium-medal">{{ medal(entry.rank) }}</span>
-            <n-avatar round :size="38" :src="entry.avatar || undefined">{{ entry.name.slice(0, 1) }}</n-avatar>
-            <div style="min-width: 0">
-              <div class="jk-podium-name">
-                <RouterLink :to="type === 'team' ? `/teams/${entry.id}` : `/users/${entry.name}`" style="color: inherit; text-decoration: none">
-                  {{ entry.name }}
-                </RouterLink>
-              </div>
-              <div class="jk-podium-score">
-                <template v-if="type === 'user'">等级分 {{ entry.rating }} · </template>{{ entry.solveCount }} 题
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="rest.length" class="jk-panel" style="padding: 0; overflow: hidden">
+        <div class="jk-panel" style="padding: 0; overflow: hidden">
           <table class="jk-table">
             <thead>
               <tr>
-                <th style="width: 80px">名次</th>
+                <th style="width: 90px">名次</th>
                 <th>{{ type === 'user' ? '选手' : '队伍' }}</th>
                 <th v-if="type === 'user'" style="width: 110px">等级分</th>
                 <th v-else style="width: 110px">总分</th>
@@ -99,8 +78,10 @@ onMounted(async () => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="entry in rest" :key="entry.id">
-                <td><span class="jk-rank">{{ entry.rank }}</span></td>
+              <tr v-for="entry in items" :key="entry.id">
+                <td>
+                  <span class="jk-rank" :class="entry.rank <= 3 ? `r${entry.rank}` : ''">{{ entry.rank }}</span>
+                </td>
                 <td>
                   <div style="display: flex; align-items: center; gap: 10px">
                     <n-avatar round :size="28" :src="entry.avatar || undefined">{{ entry.name.slice(0, 1) }}</n-avatar>
