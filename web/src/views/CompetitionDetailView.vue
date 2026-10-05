@@ -71,7 +71,7 @@ async function register() {
 const boardColumns = [
   { title: '#', key: 'rank', width: 70, render: (r: any) => (r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : r.rank) },
   { title: '名称', key: 'name' },
-  { title: '总分', key: 'score', width: 100 },
+  { title: '等级分', key: 'score', width: 100 },
   { title: '解题数', key: 'solveCount', width: 90 },
   { title: '最后解出', key: 'lastSolveAt', width: 180, render: (r: any) => (r.lastSolveAt ? new Date(r.lastSolveAt).toLocaleString() : '—') },
 ];

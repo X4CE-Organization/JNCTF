@@ -4,9 +4,11 @@ import { NCard, NTag, NSpin, NList, NListItem, NThing, NEmpty, NDescriptions, ND
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { api } from '../api';
 import { DIFFICULTY_META } from '../theme';
+import { useAuthStore } from '../stores/auth';
 
 const route = useRoute();
 const router = useRouter();
+const auth = useAuthStore();
 const loading = ref(true);
 const profile = ref<any>(null);
 const moments = ref<any[]>([]);
@@ -39,6 +41,13 @@ onMounted(load);
           <h1 class="mt-3 text-lg font-semibold">{{ profile.displayName }}</h1>
           <p class="text-xs opacity-60">@{{ profile.username }}</p>
           <p class="mt-2 text-sm opacity-70">{{ profile.bio || '这个人很神秘，什么都没写' }}</p>
+          <RouterLink
+            v-if="auth.isLogin && auth.user?.username !== profile.username"
+            :to="`/messages?to=${profile.username}`"
+            class="profile-dm"
+          >
+            私信
+          </RouterLink>
         </div>
         <n-descriptions class="mt-4" :column="1" size="small" label-placement="left">
           <n-descriptions-item label="等级分">{{ profile.score }}</n-descriptions-item>
@@ -107,6 +116,22 @@ onMounted(load);
 </template>
 
 <style scoped>
+.profile-dm {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 6px 18px;
+  border: 1px solid var(--jk-accent);
+  border-radius: 5px;
+  color: var(--jk-accent);
+  font-size: 13px;
+  text-decoration: none;
+  transition: background 0.14s ease;
+}
+
+.profile-dm:hover {
+  background: var(--jk-accent-soft);
+}
+
 .profile-moments {
   display: flex;
   flex-direction: column;

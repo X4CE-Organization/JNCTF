@@ -14,6 +14,7 @@ const router = useRouter();
 const route = useRoute();
 const dark = ref(false);
 const unread = ref(0);
+const dmUnread = ref(0);
 const scrolled = ref(false);
 const mobileOpen = ref(false);
 
@@ -44,6 +45,7 @@ const userOptions = computed(() => [
   { label: '我的提交', key: 'submissions' },
   { label: '我的工单', key: 'tickets' },
   { label: `消息中心${unread.value ? `（${unread.value}）` : ''}`, key: 'notifications' },
+  { label: `私信${dmUnread.value ? `（${dmUnread.value}）` : ''}`, key: 'messages' },
   { label: '个人设置', key: 'settings' },
   ...(auth.isAdmin ? [{ label: '管理后台', key: 'admin' }] : []),
   { type: 'divider', key: 'd1' },
@@ -57,12 +59,21 @@ function isActive(path: string): boolean {
 async function loadUnread() {
   if (!auth.isLogin) {
     unread.value = 0;
+    dmUnread.value = 0;
     return;
   }
-  unread.value = await api
-    .get<{ unread: number }>('/api/notifications/unread-count')
-    .then((d) => d.unread)
-    .catch(() => 0);
+  const [notice, dm] = await Promise.all([
+    api
+      .get<{ unread: number }>('/api/notifications/unread-count')
+      .then((d) => d.unread)
+      .catch(() => 0),
+    api
+      .get<{ unread: number }>('/api/messages/unread-count')
+      .then((d) => d.unread)
+      .catch(() => 0),
+  ]);
+  unread.value = notice;
+  dmUnread.value = dm;
 }
 
 async function onUserSelect(key: string) {
@@ -75,6 +86,7 @@ async function onUserSelect(key: string) {
     profile: `/users/${auth.user?.username}`,
     creation: '/creation',
     submissions: '/submissions?mine=1',
+    messages: '/messages',
     tickets: '/tickets',
     notifications: '/notifications',
     settings: '/settings',
@@ -154,6 +166,11 @@ function toggleTheme() {
                   </button>
 
                   <template v-if="auth.isLogin">
+                    <RouterLink to="/messages" class="icon-btn" title="私信">
+                      <n-badge :value="dmUnread" :max="99" :show="dmUnread > 0" :offset="[4, -2]">
+                        <span class="bell">✉</span>
+                      </n-badge>
+                    </RouterLink>
                     <RouterLink to="/notifications" class="icon-btn" title="消息中心">
                       <n-badge :value="unread" :max="99" :show="unread > 0" :offset="[4, -2]">
                         <span class="bell">🔔</span>

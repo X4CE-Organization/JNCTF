@@ -76,7 +76,7 @@ onMounted(async () => {
                   {{ entry.name }}
                 </RouterLink>
               </div>
-              <div class="jk-podium-score">{{ entry.score }} PTS · {{ entry.solveCount }} SOLVED</div>
+              <div class="jk-podium-score">{{ entry.score }} 等级分 · {{ entry.solveCount }} 题</div>
             </div>
           </div>
         </div>
@@ -87,7 +87,7 @@ onMounted(async () => {
               <tr>
                 <th style="width: 80px">名次</th>
                 <th>{{ type === 'user' ? '选手' : '队伍' }}</th>
-                <th style="width: 110px">总分</th>
+                <th style="width: 110px">等级分</th>
                 <th style="width: 100px">解题数</th>
                 <th style="width: 190px">最后解出</th>
               </tr>

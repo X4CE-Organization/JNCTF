@@ -23,7 +23,8 @@ const columns = [
   { title: '昵称', key: 'displayName', width: 140 },
   { title: '邮箱', key: 'email', width: 180 },
   { title: '角色', key: 'role', width: 120, render: (r: any) => ({ USER: '普通用户', ADMIN: '管理员', SUPER_ADMIN: '超级管理员' }[r.role as string]) },
-  { title: '积分', key: 'score', width: 80 },
+  { title: '等级分', key: 'score', width: 80 },
+  { title: '积分', key: 'points', width: 80 },
   { title: '队伍', key: 'team', width: 120, render: (r: any) => r.team?.name ?? '—' },
   { title: '状态', key: 'banned', width: 90, render: (r: any) => (r.banned ? '已封禁' : r.status) },
   { title: '操作', key: 'actions', width: 150, render: (row: any) => row },
@@ -103,7 +104,7 @@ onMounted(load);
         <n-form-item v-if="auth.isSuperAdmin" label="角色">
           <n-select v-model:value="form.role" :options="[{ label: '普通用户', value: 'USER' }, { label: '管理员', value: 'ADMIN' }, { label: '超级管理员', value: 'SUPER_ADMIN' }]" />
         </n-form-item>
-        <n-form-item v-if="auth.isSuperAdmin" label="积分"><n-input-number v-model:value="form.score" /></n-form-item>
+        <n-form-item v-if="auth.isSuperAdmin" label="等级分"><n-input-number v-model:value="form.score" /></n-form-item>
         <n-form-item label="封禁"><n-switch v-model:value="form.banned" /></n-form-item>
         <n-form-item v-if="form.banned" label="封禁原因"><n-input v-model:value="form.banReason" /></n-form-item>
       </n-form>

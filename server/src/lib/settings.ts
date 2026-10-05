@@ -208,6 +208,11 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   'community.article_categories': '综合,学习笔记,CTF 入门,逆向,Web,密码学,杂项',
   'community.allow_user_challenge': 'true',
   'community.allow_user_competition': 'true',
+
+  /* -------------------------------------------------------------- 私信 */
+  'messages.enabled': 'true',
+  'messages.allow_strangers': 'true',
+  'messages.max_length': '2000',
 };
 
 /** 对游客公开的设置项（绝不能包含密钥类） */
@@ -271,6 +276,9 @@ export const PUBLIC_KEYS = [
   'community.article_categories',
   'community.allow_user_challenge',
   'community.allow_user_competition',
+  'messages.enabled',
+  'messages.allow_strangers',
+  'messages.max_length',
 ];
 
 /**

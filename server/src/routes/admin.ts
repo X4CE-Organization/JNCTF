@@ -127,6 +127,7 @@ adminRouter.get(
         role: u.role,
         status: u.status,
         score: u.score,
+        points: u.points,
         banned: u.banned,
         banReason: u.banReason,
         hidden: u.hidden,

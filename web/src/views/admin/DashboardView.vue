@@ -45,7 +45,7 @@ onMounted(async () => {
           </n-card>
         </n-gi>
         <n-gi span="3 s:3 m:1">
-          <n-card size="small" title="积分榜前 5">
+          <n-card size="small" title="等级分榜前 5">
             <n-list>
               <n-list-item v-for="(u, i) in data.topUsers" :key="u.id">
                 <n-space align="center"><n-tag size="tiny">{{ i + 1 }}</n-tag><span>{{ u.displayName || u.username }}</span><span class="ml-auto font-medium">{{ u.score }}</span></n-space>

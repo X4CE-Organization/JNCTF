@@ -16,6 +16,7 @@ import { oauthRouter } from './routes/oauth.js';
 import { articleRouter, discussionRouter, momentRouter } from './routes/feed.js';
 import { shopRouter } from './routes/shop.js';
 import { creationRouter } from './routes/creation.js';
+import { messageRouter } from './routes/messages.js';
 import { siteRouter } from './routes/site.js';
 import { challengeRouter, submissionRouter } from './routes/challenges.js';
 import { scoreboardRouter } from './routes/scoreboard.js';
@@ -66,6 +67,7 @@ export function createApp() {
   app.use('/api/articles', articleRouter);
   app.use('/api/shop', shopRouter);
   app.use('/api/creation', creationRouter);
+  app.use('/api/messages', messageRouter);
   app.use('/api/site', siteRouter);
   app.use('/api/challenges', challengeRouter);
   app.use('/api/submissions', submissionRouter);

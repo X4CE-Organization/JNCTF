@@ -22,7 +22,7 @@ const columns = [
   { title: '队伍', key: 'name' },
   { title: '学校 / 单位', key: 'affiliation' },
   { title: '成员', key: 'memberCount', width: 80 },
-  { title: '总分', key: 'score', width: 100 },
+  { title: '等级分', key: 'score', width: 100 },
 ];
 
 async function load() {

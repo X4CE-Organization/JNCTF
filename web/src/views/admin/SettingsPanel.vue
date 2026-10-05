@@ -285,6 +285,16 @@ const GROUPS: Group[] = [
       num('自动关闭天数', 'ticket.auto_close_days', '0 表示不自动关闭'),
     ],
   },
+  {
+    id: 'messages',
+    title: '私信',
+    hint: '一对一私信的开关与限制',
+    fields: [
+      bool('启用私信', 'messages.enabled'),
+      bool('允许陌生人私信', 'messages.allow_strangers', '关闭后普通用户之间只有同队成员能互发'),
+      num('单条私信最大长度', 'messages.max_length'),
+    ],
+  },
 ];
 
 const currentGroup = computed(() => GROUPS.find((g) => g.id === activeGroup.value) ?? GROUPS[0]!);

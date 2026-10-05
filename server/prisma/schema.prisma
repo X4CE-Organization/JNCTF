@@ -88,6 +88,8 @@ model User {
   articleComments  ArticleComment[]
   shopOrders       ShopOrder[]
   grants           Grant[]
+  sentMessages     DirectMessage[]         @relation("MessageSender")
+  receivedMessages DirectMessage[]         @relation("MessageReceiver")
 
   @@index([score])
   @@index([points])
@@ -1014,6 +1016,31 @@ model Grant {
 
   @@index([userId, kind])
   @@map("grants")
+}
+
+// ---------------------------------------------------------------------------
+// 私信
+// ---------------------------------------------------------------------------
+
+/**
+ * 一对一私信。会话用「小 id - 大 id」拼成的 conversationKey 归组，
+ * 这样拉两个人的聊天记录只要按 key 查，不用建额外的会话表。
+ */
+model DirectMessage {
+  id              BigInt    @id @default(autoincrement())
+  conversationKey String    @map("conversation_key") @db.VarChar(40)
+  senderId        BigInt    @map("sender_id")
+  receiverId      BigInt    @map("receiver_id")
+  content         String    @db.VarChar(2000)
+  readAt          DateTime? @map("read_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  sender   User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([conversationKey, id])
+  @@index([receiverId, readAt])
+  @@map("direct_messages")
 }
 
 model ApiToken {
