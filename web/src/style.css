@@ -730,7 +730,8 @@ body {
 
 .jk-podium {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* 人数少的时候卡片自动铺满，不留空洞 */
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }

@@ -12,7 +12,8 @@ const breakdown = ref<any[]>([]);
 
 const podium = computed(() => items.value.slice(0, 3));
 const rest = computed(() => items.value.slice(3));
-const medals = ['01', '02', '03'];
+/** 名次按后端算出来的 rank，并列时显示同一个名次 */
+const medal = (rank: number) => String(rank).padStart(2, '0');
 const breakdownChart = computed(() =>
   breakdown.value.map((c) => ({ name: c.name, value: c.solves, color: c.color || undefined })),
 );
@@ -64,13 +65,13 @@ onMounted(async () => {
     <n-spin :show="loading">
       <div v-if="!items.length && !loading" class="jk-empty">
         <div class="jk-empty-icon">□</div>
-        <div>// 还没有人解出题目</div>
+        <div>// 还没有可展示的用户</div>
       </div>
 
       <template v-else>
         <div class="jk-podium">
-          <div v-for="(entry, index) in podium" :key="entry.id" class="jk-podium-card" :class="`rank-${index + 1}`">
-            <span class="jk-podium-medal">{{ medals[index] }}</span>
+          <div v-for="entry in podium" :key="entry.id" class="jk-podium-card" :class="`rank-${entry.rank}`">
+            <span class="jk-podium-medal">{{ medal(entry.rank) }}</span>
             <n-avatar round :size="38" :src="entry.avatar || undefined">{{ entry.name.slice(0, 1) }}</n-avatar>
             <div style="min-width: 0">
               <div class="jk-podium-name">
@@ -85,7 +86,7 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div class="jk-panel" style="padding: 0; overflow: hidden">
+        <div v-if="rest.length" class="jk-panel" style="padding: 0; overflow: hidden">
           <table class="jk-table">
             <thead>
               <tr>
@@ -99,7 +100,7 @@ onMounted(async () => {
             </thead>
             <tbody>
               <tr v-for="entry in rest" :key="entry.id">
-                <td><span class="jk-rank" :class="entry.rank <= 3 ? `r${entry.rank}` : ''">{{ entry.rank }}</span></td>
+                <td><span class="jk-rank">{{ entry.rank }}</span></td>
                 <td>
                   <div style="display: flex; align-items: center; gap: 10px">
                     <n-avatar round :size="28" :src="entry.avatar || undefined">{{ entry.name.slice(0, 1) }}</n-avatar>
