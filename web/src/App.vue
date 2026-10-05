@@ -24,7 +24,7 @@ const NAV = [
   { to: '/teams', label: '团队' },
   { to: '/moments', label: '动态' },
   { to: '/discussions', label: '讨论' },
-  { to: '/articles', label: '文章' },
+  { to: '/articles', label: '文章广场' },
   { to: '/shop', label: '商店' },
   { to: '/scoreboard', label: '榜单' },
   { to: '/submissions', label: '提交' },
