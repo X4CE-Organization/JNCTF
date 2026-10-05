@@ -8,6 +8,7 @@ export interface SessionUser {
   avatar: string;
   role: 'USER' | 'ADMIN' | 'SUPER_ADMIN';
   score: number;
+  points: number;
   totpEnabled: boolean;
   email?: string;
   phone?: string;

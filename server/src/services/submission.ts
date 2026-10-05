@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import { ApiError } from '../lib/errors.js';
-import { getInt, getSetting } from '../lib/settings.js';
+import { getBool, getInt, getSetting } from '../lib/settings.js';
+import { addPoints, pointsPerFirstBlood, pointsPerSolve } from '../lib/points.js';
 import { rateLimit } from '../lib/redis.js';
 import { judgeFlag } from './judge.js';
 import { bloodBonus, challengeValue } from './scoring.js';
@@ -211,6 +212,14 @@ export async function submitFlag(user: AuthUser, input: SubmitInput): Promise<Su
       refId: challenge.id,
     },
   });
+
+  // 积分（商店货币）和等级分分开记：做一题给固定积分，一血再多给一点
+  if (getBool('points.enabled')) {
+    const gain = pointsPerSolve() + (rank === 1 ? pointsPerFirstBlood() : 0);
+    if (gain > 0) {
+      await addPoints(user.id, gain, `解出「${challenge.title}」`, { refType: 'challenge', refId: challenge.id }).catch(() => null);
+    }
+  }
 
   if (teamId) {
     await prisma.team.update({ where: { id: teamId }, data: { score: { increment: score } } });

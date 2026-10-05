@@ -9,11 +9,16 @@ const route = useRoute();
 const router = useRouter();
 const loading = ref(true);
 const profile = ref<any>(null);
+const moments = ref<any[]>([]);
 
 async function load() {
   loading.value = true;
   try {
     profile.value = await api.get<any>(`/api/users/${route.params.username}/profile`);
+    moments.value = await api
+      .get<any>(`/api/moments?username=${encodeURIComponent(String(route.params.username))}&size=5`)
+      .then((d) => d.items ?? [])
+      .catch(() => []);
   } finally {
     loading.value = false;
   }
@@ -36,9 +41,11 @@ onMounted(load);
           <p class="mt-2 text-sm opacity-70">{{ profile.bio || '这个人很神秘，什么都没写' }}</p>
         </div>
         <n-descriptions class="mt-4" :column="1" size="small" label-placement="left">
-          <n-descriptions-item label="积分">{{ profile.score }}</n-descriptions-item>
+          <n-descriptions-item label="等级分">{{ profile.score }}</n-descriptions-item>
+          <n-descriptions-item label="积分">{{ profile.points }}</n-descriptions-item>
           <n-descriptions-item label="排名">#{{ profile.globalRank }}</n-descriptions-item>
           <n-descriptions-item label="解题">{{ profile.solveCount }}</n-descriptions-item>
+          <n-descriptions-item label="动态">{{ profile.momentCount ?? 0 }}</n-descriptions-item>
           <n-descriptions-item label="队伍">
             <RouterLink v-if="profile.team" :to="`/teams/${profile.team.id}`" class="text-indigo-500 hover:underline">
               {{ profile.team.name }}
@@ -52,7 +59,27 @@ onMounted(load);
         </n-descriptions>
       </n-card>
 
-      <n-card title="最近解出的题目">
+      <div>
+      <n-card title="动态">
+        <template #header-extra>
+          <RouterLink :to="`/moments?username=${profile.username}`" class="text-indigo-500 hover:underline text-sm">
+            全部 →
+          </RouterLink>
+        </template>
+        <n-empty v-if="!moments.length" description="还没有发过动态" />
+        <div v-else class="profile-moments">
+          <div v-for="m in moments" :key="m.id" class="profile-moment">
+            <p>{{ m.content }}</p>
+            <div class="profile-moment-meta mono">
+              <span>{{ new Date(m.createdAt).toLocaleString() }}</span>
+              <span>♥ {{ m.likeCount }}</span>
+              <span>💬 {{ m.commentCount }}</span>
+            </div>
+          </div>
+        </div>
+      </n-card>
+
+      <n-card title="最近解出的题目" class="mt-4">
         <n-empty v-if="!profile.solvedChallenges?.length" description="还没有解出任何题目" />
         <n-list v-else>
           <n-list-item v-for="c in profile.solvedChallenges" :key="c.id">
@@ -74,6 +101,38 @@ onMounted(load);
         </n-list>
       </n-card>
       </div>
+      </div>
     </div>
   </n-spin>
 </template>
+
+<style scoped>
+.profile-moments {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-moment {
+  padding: 11px 0;
+  border-bottom: 1px dashed var(--jk-border);
+}
+
+.profile-moment:last-child {
+  border-bottom: 0;
+}
+
+.profile-moment p {
+  margin: 0 0 5px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.profile-moment-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--jk-muted);
+}
+</style>

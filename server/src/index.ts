@@ -5,6 +5,7 @@ import { prisma } from './lib/prisma.js';
 import { initRedis } from './lib/redis.js';
 import { warmSettings } from './lib/settings.js';
 import { ensureSeed } from './seed.js';
+import { ensureDefaultShopItems } from './routes/shop.js';
 import { startScheduler } from './scheduler.js';
 
 async function main() {
@@ -12,6 +13,7 @@ async function main() {
   await initRedis();
   await warmSettings();
   await ensureSeed();
+  await ensureDefaultShopItems();
   startScheduler();
 
   const app = createApp();

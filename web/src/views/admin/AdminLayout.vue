@@ -22,6 +22,8 @@ const tabs: AdminTab[] = [
   { label: '题解', to: '/admin/writeups', match: (p) => p.startsWith('/admin/writeups') },
   { label: '工单', to: '/admin/tickets', match: (p) => p.startsWith('/admin/tickets') },
   { label: '公告', to: '/admin/announcements', match: (p) => p.startsWith('/admin/announcements') },
+  { label: '社区', to: '/admin/community', match: (p) => p.startsWith('/admin/community') },
+  { label: '商店', to: '/admin/shop', match: (p) => p.startsWith('/admin/shop') },
   { label: '日志', to: '/admin/logs', super: true, match: (p) => p.startsWith('/admin/logs') },
   { label: '系统设置', to: '/admin/settings', super: true, match: (p) => p.startsWith('/admin/settings') },
 ];

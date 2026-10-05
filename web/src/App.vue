@@ -18,10 +18,14 @@ const scrolled = ref(false);
 const mobileOpen = ref(false);
 
 const NAV = [
+  { to: '/moments', label: '动态' },
   { to: '/challenges', label: '题目' },
   { to: '/competitions', label: '比赛' },
-  { to: '/scoreboard', label: '榜单' },
+  { to: '/discussions', label: '讨论' },
+  { to: '/articles', label: '文章' },
+  { to: '/shop', label: '商店' },
   { to: '/teams', label: '团队' },
+  { to: '/scoreboard', label: '榜单' },
   { to: '/submissions', label: '提交' },
 ];
 
@@ -36,6 +40,7 @@ const maintenance = computed(
 
 const userOptions = computed(() => [
   { label: '个人主页', key: 'profile' },
+  { label: '创作中心', key: 'creation' },
   { label: '我的提交', key: 'submissions' },
   { label: '我的工单', key: 'tickets' },
   { label: `消息中心${unread.value ? `（${unread.value}）` : ''}`, key: 'notifications' },
@@ -68,6 +73,7 @@ async function onUserSelect(key: string) {
   }
   const map: Record<string, string> = {
     profile: `/users/${auth.user?.username}`,
+    creation: '/creation',
     submissions: '/submissions?mine=1',
     tickets: '/tickets',
     notifications: '/notifications',
@@ -160,7 +166,7 @@ function toggleTheme() {
                         </n-avatar>
                         <span class="user-meta">
                           <span class="user-name">{{ auth.user?.displayName }}</span>
-                          <span class="user-score">{{ auth.user?.score }} 分</span>
+                          <span class="user-score">等级分 {{ auth.user?.score }} · 积分 {{ auth.user?.points }}</span>
                         </span>
                       </button>
                     </n-dropdown>

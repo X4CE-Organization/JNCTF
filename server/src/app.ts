@@ -13,6 +13,9 @@ import { attachUser } from './middleware/auth.js';
 import { getBool, getSetting } from './lib/settings.js';
 import { authRouter } from './routes/auth.js';
 import { oauthRouter } from './routes/oauth.js';
+import { articleRouter, discussionRouter, momentRouter } from './routes/feed.js';
+import { shopRouter } from './routes/shop.js';
+import { creationRouter } from './routes/creation.js';
 import { siteRouter } from './routes/site.js';
 import { challengeRouter, submissionRouter } from './routes/challenges.js';
 import { scoreboardRouter } from './routes/scoreboard.js';
@@ -58,6 +61,11 @@ export function createApp() {
 
   app.use('/api/auth', authRouter);
   app.use('/api/auth/oauth', oauthRouter);
+  app.use('/api/moments', momentRouter);
+  app.use('/api/discussions', discussionRouter);
+  app.use('/api/articles', articleRouter);
+  app.use('/api/shop', shopRouter);
+  app.use('/api/creation', creationRouter);
   app.use('/api/site', siteRouter);
   app.use('/api/challenges', challengeRouter);
   app.use('/api/submissions', submissionRouter);

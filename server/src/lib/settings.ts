@@ -181,6 +181,33 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   'ticket.allow_guest': 'false',
   'ticket.max_open_per_user': '5',
   'ticket.auto_close_days': '7',
+
+  /* -------------------------------------------------------------- 积分 */
+  'points.enabled': 'true',
+  'points.per_solve': '1',
+  'points.first_blood_bonus': '2',
+  'points.per_moment': '1',
+  'points.per_article': '3',
+  'points.per_discussion': '1',
+  'points.allow_negative': 'false',
+
+  /* -------------------------------------------------------------- 商店 */
+  'shop.enabled': 'true',
+  'shop.title': '积分商店',
+  'shop.notice': '做一题得一点积分，攒够了就能在这里换出题资格和办赛资格。',
+
+  /* ------------------------------------------------------------ 社区 */
+  'community.moment_enabled': 'true',
+  'community.moment_max_images': '9',
+  'community.moment_max_length': '2000',
+  'community.moment_need_review': 'false',
+  'community.discussion_enabled': 'true',
+  'community.discussion_boards': '综合讨论,题目求助,技术分享,站务反馈',
+  'community.article_enabled': 'true',
+  'community.article_need_review': 'false',
+  'community.article_categories': '综合,学习笔记,CTF 入门,逆向,Web,密码学,杂项',
+  'community.allow_user_challenge': 'true',
+  'community.allow_user_competition': 'true',
 };
 
 /** 对游客公开的设置项（绝不能包含密钥类） */
@@ -230,6 +257,20 @@ export const PUBLIC_KEYS = [
   'upload.max_avatar_mb',
   'upload.allowed_ext',
   'oauth.enabled',
+  'points.enabled',
+  'points.per_solve',
+  'shop.enabled',
+  'shop.title',
+  'shop.notice',
+  'community.moment_enabled',
+  'community.moment_max_images',
+  'community.moment_max_length',
+  'community.discussion_enabled',
+  'community.discussion_boards',
+  'community.article_enabled',
+  'community.article_categories',
+  'community.allow_user_challenge',
+  'community.allow_user_competition',
 ];
 
 /**

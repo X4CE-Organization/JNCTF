@@ -1088,3 +1088,349 @@ adminRouter.post(
     return ok(res, { updated });
   }),
 );
+
+/* ======================================================= 商店管理 */
+
+adminRouter.get(
+  '/shop/items',
+  asyncHandler(async (req, res) => {
+    requireAdmin(req);
+    const rows = await prisma.shopItem.findMany({ orderBy: [{ sort: 'asc' }, { id: 'asc' }] });
+    const sold = await prisma.shopOrder.groupBy({ by: ['itemId'], _count: { _all: true } });
+    const soldMap = new Map(sold.map((s) => [String(s.itemId), s._count._all]));
+    return ok(res, { items: rows.map((i) => ({ ...i, soldCount: soldMap.get(String(i.id)) ?? 0 })) });
+  }),
+);
+
+const shopItemSchema = z.object({
+  slug: z.string().trim().regex(/^[a-z0-9-]{2,64}$/).optional(),
+  name: z.string().trim().min(1).max(80),
+  description: z.string().max(500).optional(),
+  icon: z.string().max(32).optional(),
+  price: z.number().int().min(0).max(1_000_000),
+  kind: z.enum(['problem', 'contest']),
+  grantAmount: z.number().int().min(1).max(100).optional(),
+  stock: z.number().int().min(-1).max(1_000_000).optional(),
+  maxPerUser: z.number().int().min(0).max(1000).optional(),
+  active: z.boolean().optional(),
+  sort: z.number().int().min(0).max(9999).optional(),
+});
+
+adminRouter.post(
+  '/shop/items',
+  asyncHandler(async (req, res) => {
+    const actor = requireAdmin(req);
+    const body = shopItemSchema.parse(req.body);
+    const slug = body.slug ?? `item-${crypto.randomBytes(3).toString('hex')}`;
+    if (await prisma.shopItem.findUnique({ where: { slug } })) throw ApiError.conflict('这个标识已经存在');
+    const item = await prisma.shopItem.create({
+      data: {
+        slug,
+        name: body.name,
+        description: body.description ?? '',
+        icon: body.icon ?? 'package',
+        price: body.price,
+        kind: body.kind,
+        grantAmount: body.grantAmount ?? 1,
+        stock: body.stock ?? -1,
+        maxPerUser: body.maxPerUser ?? 0,
+        active: body.active ?? true,
+        sort: body.sort ?? 0,
+      },
+    });
+    await audit(req, actor, 'admin.shop_item_create', 'shop_item', item.id, item.name);
+    return ok(res, { id: item.id }, 201);
+  }),
+);
+
+adminRouter.put(
+  '/shop/items/:id',
+  asyncHandler(async (req, res) => {
+    const actor = requireAdmin(req);
+    const id = BigInt(req.params.id!);
+    const body = shopItemSchema.partial().parse(req.body);
+    await prisma.shopItem.update({ where: { id }, data: body });
+    await audit(req, actor, 'admin.shop_item_update', 'shop_item', id);
+    return ok(res, { ok: true });
+  }),
+);
+
+adminRouter.delete(
+  '/shop/items/:id',
+  asyncHandler(async (req, res) => {
+    const actor = requireAdmin(req);
+    const id = BigInt(req.params.id!);
+    await prisma.shopItem.update({ where: { id }, data: { active: false } });
+    await audit(req, actor, 'admin.shop_item_offline', 'shop_item', id);
+    return ok(res, { ok: true });
+  }),
+);
+
+adminRouter.get(
+  '/shop/orders',
+  asyncHandler(async (req, res) => {
+    requireAdmin(req);
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const size = Math.min(100, Math.max(1, Number(req.query.size) || 30));
+    const [total, rows] = await Promise.all([
+      prisma.shopOrder.count(),
+      prisma.shopOrder.findMany({
+        include: { user: { select: { id: true, username: true, displayName: true } } },
+        orderBy: { id: 'desc' },
+        skip: (page - 1) * size,
+        take: size,
+      }),
+    ]);
+    return ok(res, {
+      items: rows.map((o) => ({
+        id: o.id,
+        orderNo: o.orderNo,
+        user: { id: o.user.id, username: o.user.username, displayName: o.user.displayName || o.user.username },
+        itemName: o.itemName,
+        kind: o.kind,
+        price: o.price,
+        status: o.status,
+        createdAt: o.createdAt,
+      })),
+      total,
+      page,
+      size,
+      totalPages: Math.ceil(total / size),
+    });
+  }),
+);
+
+/** 手动给某个用户发资格（补偿 / 奖励用） */
+adminRouter.post(
+  '/shop/grant',
+  asyncHandler(async (req, res) => {
+    const actor = requireAdmin(req);
+    const body = z
+      .object({
+        username: z.string().trim().min(1),
+        kind: z.enum(['problem', 'contest']),
+        amount: z.number().int().min(1).max(100),
+        note: z.string().max(200).optional(),
+      })
+      .parse(req.body);
+    const target = await prisma.user.findUnique({ where: { username: body.username } });
+    if (!target) throw ApiError.notFound('用户不存在');
+    const { grantQuota } = await import('../lib/points.js');
+    await grantQuota(target.id, body.kind, body.amount, { note: body.note ?? `管理员发放：${actor.username}` });
+    await audit(req, actor, 'admin.shop_grant', 'user', target.id, `${body.kind} x${body.amount}`);
+    await notify(target.id, 'SYSTEM', '你收到了新的资格', `${body.kind === 'problem' ? '出题' : '办赛'}资格 +${body.amount}`, '/creation');
+    return ok(res, { ok: true });
+  }),
+);
+
+/** 调整用户积分 */
+adminRouter.post(
+  '/points/adjust',
+  asyncHandler(async (req, res) => {
+    const actor = requireAdmin(req);
+    const body = z
+      .object({
+        username: z.string().trim().min(1),
+        delta: z.number().int().min(-1_000_000).max(1_000_000),
+        reason: z.string().max(120).optional(),
+      })
+      .parse(req.body);
+    const target = await prisma.user.findUnique({ where: { username: body.username } });
+    if (!target) throw ApiError.notFound('用户不存在');
+    const { addPoints } = await import('../lib/points.js');
+    const result = await addPoints(target.id, body.delta, body.reason || `管理员调整（${actor.username}）`, { refType: 'admin' });
+    await audit(req, actor, 'admin.points_adjust', 'user', target.id, `${body.delta} -> ${result.balance}`);
+    return ok(res, result);
+  }),
+);
+
+/* ======================================================= 社区管理 */
+
+adminRouter.get(
+  '/moments',
+  asyncHandler(async (req, res) => {
+    requireAdmin(req);
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const size = Math.min(100, Math.max(1, Number(req.query.size) || 30));
+    const [total, rows] = await Promise.all([
+      prisma.moment.count(),
+      prisma.moment.findMany({
+        include: { user: { select: { id: true, username: true, displayName: true } } },
+        orderBy: { id: 'desc' },
+        skip: (page - 1) * size,
+        take: size,
+      }),
+    ]);
+    return ok(res, {
+      items: rows.map((m) => ({
+        id: m.id,
+        content: m.content,
+        hidden: m.hidden,
+        pinned: m.pinned,
+        likeCount: m.likeCount,
+        commentCount: m.commentCount,
+        createdAt: m.createdAt,
+        user: { id: m.user.id, username: m.user.username, displayName: m.user.displayName || m.user.username },
+      })),
+      total,
+      page,
+      size,
+      totalPages: Math.ceil(total / size),
+    });
+  }),
+);
+
+adminRouter.put(
+  '/moments/:id',
+  asyncHandler(async (req, res) => {
+    const actor = requireAdmin(req);
+    const id = BigInt(req.params.id!);
+    const body = z.object({ hidden: z.boolean().optional(), pinned: z.boolean().optional() }).parse(req.body);
+    const moment = await prisma.moment.update({ where: { id }, data: body });
+    await audit(req, actor, 'admin.moment_update', 'moment', id);
+    if (moment.hidden) {
+      await notify(moment.userId, 'SYSTEM', '你的动态被隐藏了', body.hidden ? '管理员将其设为不可见' : '', '/moments');
+    }
+    return ok(res, { ok: true });
+  }),
+);
+
+adminRouter.delete(
+  '/moments/:id',
+  asyncHandler(async (req, res) => {
+    const actor = requireAdmin(req);
+    const id = BigInt(req.params.id!);
+    await prisma.moment.delete({ where: { id } });
+    await audit(req, actor, 'admin.moment_delete', 'moment', id);
+    return ok(res, { ok: true });
+  }),
+);
+
+adminRouter.get(
+  '/discussions',
+  asyncHandler(async (req, res) => {
+    requireAdmin(req);
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const size = Math.min(100, Math.max(1, Number(req.query.size) || 30));
+    const [total, rows] = await Promise.all([
+      prisma.discussion.count(),
+      prisma.discussion.findMany({
+        include: { user: { select: { id: true, username: true, displayName: true } } },
+        orderBy: { id: 'desc' },
+        skip: (page - 1) * size,
+        take: size,
+      }),
+    ]);
+    return ok(res, {
+      items: rows.map((d) => ({
+        id: d.id,
+        board: d.board,
+        title: d.title,
+        hidden: d.hidden,
+        pinned: d.pinned,
+        locked: d.locked,
+        replyCount: d.replyCount,
+        views: d.views,
+        createdAt: d.createdAt,
+        user: { id: d.user.id, username: d.user.username, displayName: d.user.displayName || d.user.username },
+      })),
+      total,
+      page,
+      size,
+      totalPages: Math.ceil(total / size),
+    });
+  }),
+);
+
+adminRouter.put(
+  '/discussions/:id',
+  asyncHandler(async (req, res) => {
+    const actor = requireAdmin(req);
+    const id = BigInt(req.params.id!);
+    const body = z
+      .object({ hidden: z.boolean().optional(), pinned: z.boolean().optional(), locked: z.boolean().optional() })
+      .parse(req.body);
+    await prisma.discussion.update({ where: { id }, data: body });
+    await audit(req, actor, 'admin.discussion_update', 'discussion', id);
+    return ok(res, { ok: true });
+  }),
+);
+
+adminRouter.delete(
+  '/discussions/:id',
+  asyncHandler(async (req, res) => {
+    const actor = requireAdmin(req);
+    const id = BigInt(req.params.id!);
+    await prisma.discussion.delete({ where: { id } });
+    await audit(req, actor, 'admin.discussion_delete', 'discussion', id);
+    return ok(res, { ok: true });
+  }),
+);
+
+adminRouter.get(
+  '/articles',
+  asyncHandler(async (req, res) => {
+    requireAdmin(req);
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const size = Math.min(100, Math.max(1, Number(req.query.size) || 30));
+    const state = String(req.query.state ?? '').trim();
+    const where = state ? { state } : {};
+    const [total, rows] = await Promise.all([
+      prisma.article.count({ where }),
+      prisma.article.findMany({
+        where,
+        include: { user: { select: { id: true, username: true, displayName: true } } },
+        orderBy: { id: 'desc' },
+        skip: (page - 1) * size,
+        take: size,
+      }),
+    ]);
+    return ok(res, {
+      items: rows.map((a) => ({
+        id: a.id,
+        title: a.title,
+        category: a.category,
+        state: a.state,
+        hidden: a.hidden,
+        pinned: a.pinned,
+        views: a.views,
+        createdAt: a.createdAt,
+        user: { id: a.user.id, username: a.user.username, displayName: a.user.displayName || a.user.username },
+      })),
+      total,
+      page,
+      size,
+      totalPages: Math.ceil(total / size),
+    });
+  }),
+);
+
+adminRouter.put(
+  '/articles/:id',
+  asyncHandler(async (req, res) => {
+    const actor = requireAdmin(req);
+    const id = BigInt(req.params.id!);
+    const body = z
+      .object({ state: z.enum(['PENDING', 'APPROVED']).optional(), hidden: z.boolean().optional(), pinned: z.boolean().optional() })
+      .parse(req.body);
+    const article = await prisma.article.update({ where: { id }, data: body });
+    await audit(req, actor, 'admin.article_update', 'article', id, JSON.stringify(body));
+    if (body.state === 'APPROVED') {
+      await notify(article.userId, 'SYSTEM', `文章《${article.title}》已通过审核`, '', `/articles/${article.id}`);
+    } else if (body.state === 'PENDING') {
+      await notify(article.userId, 'SYSTEM', `文章《${article.title}》未通过审核`, '', '/articles');
+    }
+    return ok(res, { ok: true });
+  }),
+);
+
+adminRouter.delete(
+  '/articles/:id',
+  asyncHandler(async (req, res) => {
+    const actor = requireAdmin(req);
+    const id = BigInt(req.params.id!);
+    await prisma.article.delete({ where: { id } });
+    await audit(req, actor, 'admin.article_delete', 'article', id);
+    return ok(res, { ok: true });
+  }),
+);

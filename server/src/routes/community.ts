@@ -368,6 +368,7 @@ userRouter.get(
       take: 30,
     });
     const rank = (await prisma.user.count({ where: { score: { gt: user.score }, hidden: false } })) + 1;
+    const momentCount = await prisma.moment.count({ where: { userId: user.id, hidden: false } });
     return ok(res, {
       id: user.id,
       username: user.username,
@@ -377,10 +378,14 @@ userRouter.get(
       website: user.website ?? '',
       country: user.country ?? '',
       organization: user.organization ?? '',
+      // score 是等级分（榜单用），points 是积分（商店用），两个都返回
       score: user.score,
+      points: user.points,
+      pointsRank: (await prisma.user.count({ where: { points: { gt: user.points }, hidden: false } })) + 1,
       globalRank: rank,
       solveCount: user._count.solves,
       submitCount: user._count.submissions,
+      momentCount,
       team: user.teamMember?.team ? { id: user.teamMember.team.id, name: user.teamMember.team.name, avatar: user.teamMember.team.avatar } : null,
       createdAt: user.createdAt,
       lastLoginAt: isSelf || isStaff ? user.lastLoginAt : undefined,

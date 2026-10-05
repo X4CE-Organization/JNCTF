@@ -44,6 +44,9 @@ model User {
   role           Role       @default(USER)
   status         UserStatus @default(ACTIVE)
   score          Int        @default(0)
+  // 积分：做一题给一点，可以在商店里换成出题 / 办赛资格。
+  // 与 score（等级分，榜单用）分开，避免花积分把排名花掉。
+  points         Int        @default(0)
   emailVerified  Boolean    @default(false) @map("email_verified")
   phoneVerified  Boolean    @default(false) @map("phone_verified")
   totpSecret     String?    @map("totp_secret") @db.VarChar(64)
@@ -76,8 +79,18 @@ model User {
   awxAttacks       AwxAttack[]             @relation("AwxAttacker")
   authoredChallenges Challenge[]           @relation("ChallengeAuthor")
   oauthAccounts    OAuthAccount[]
+  moments          Moment[]
+  momentLikes      MomentLike[]
+  momentComments   MomentComment[]
+  discussions      Discussion[]
+  discussionReplies DiscussionReply[]
+  articles         Article[]
+  articleComments  ArticleComment[]
+  shopOrders       ShopOrder[]
+  grants           Grant[]
 
   @@index([score])
+  @@index([points])
   @@map("users")
 }
 
@@ -800,6 +813,207 @@ model Setting {
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("settings")
+}
+
+// ---------------------------------------------------------------------------
+// 社区：动态 / 讨论 / 文章
+// ---------------------------------------------------------------------------
+
+/** 动态：用户可以发一条带图片的短动态，别人能点赞和评论 */
+model Moment {
+  id           BigInt   @id @default(autoincrement())
+  userId       BigInt   @map("user_id")
+  content      String   @db.VarChar(2000)
+  /** JSON 数组，最多 9 张图的 URL */
+  images       String   @default("[]") @db.VarChar(2000)
+  pinned       Boolean  @default(false)
+  hidden       Boolean  @default(false)
+  likeCount    Int      @default(0) @map("like_count")
+  commentCount Int      @default(0) @map("comment_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes    MomentLike[]
+  comments MomentComment[]
+
+  @@index([hidden, pinned, id])
+  @@index([userId, hidden, id])
+  @@map("moments")
+}
+
+model MomentLike {
+  momentId  BigInt   @map("moment_id")
+  userId    BigInt   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  moment Moment @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([momentId, userId])
+  @@map("moment_likes")
+}
+
+model MomentComment {
+  id        BigInt   @id @default(autoincrement())
+  momentId  BigInt   @map("moment_id")
+  userId    BigInt   @map("user_id")
+  content   String   @db.VarChar(1000)
+  hidden    Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  moment Moment @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([momentId, hidden, id])
+  @@map("moment_comments")
+}
+
+/** 讨论区主题。board 是板块标识，前端按板块筛选。 */
+model Discussion {
+  id          BigInt    @id @default(autoincrement())
+  board       String    @default("general") @db.VarChar(32)
+  title       String    @db.VarChar(200)
+  content     String
+  userId      BigInt    @map("user_id")
+  pinned      Boolean   @default(false)
+  locked      Boolean   @default(false)
+  hidden      Boolean   @default(false)
+  views       Int       @default(0)
+  replyCount  Int       @default(0) @map("reply_count")
+  lastReplyAt DateTime? @map("last_reply_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replies DiscussionReply[]
+
+  @@index([hidden, pinned, id])
+  @@index([board, hidden, id])
+  @@map("discussions")
+}
+
+model DiscussionReply {
+  id           BigInt   @id @default(autoincrement())
+  discussionId BigInt   @map("discussion_id")
+  userId       BigInt   @map("user_id")
+  content      String
+  floor        Int      @default(1)
+  replyToId    BigInt?  @map("reply_to_id")
+  hidden       Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([discussionId, hidden, id])
+  @@map("discussion_replies")
+}
+
+/** 文章广场。state=PENDING 表示待审核，APPROVED 才在前台公开。 */
+model Article {
+  id        BigInt   @id @default(autoincrement())
+  title     String   @db.VarChar(200)
+  summary   String   @default("") @db.VarChar(500)
+  content   String
+  cover     String?  @db.VarChar(512)
+  category  String   @default("综合") @db.VarChar(32)
+  userId    BigInt   @map("user_id")
+  state     String   @default("APPROVED") @db.VarChar(16)
+  pinned    Boolean  @default(false)
+  hidden    Boolean  @default(false)
+  views     Int      @default(0)
+  likeCount Int      @default(0) @map("like_count")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments ArticleComment[]
+
+  @@index([hidden, pinned, id])
+  @@index([state, hidden, id])
+  @@map("articles")
+}
+
+model ArticleComment {
+  id        BigInt   @id @default(autoincrement())
+  articleId BigInt   @map("article_id")
+  userId    BigInt   @map("user_id")
+  content   String   @db.VarChar(1000)
+  hidden    Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([articleId, hidden, id])
+  @@map("article_comments")
+}
+
+// ---------------------------------------------------------------------------
+// 商店 / 积分 / 资格
+// ---------------------------------------------------------------------------
+
+/** 商品。kind=problem 是「出一道题」，kind=contest 是「办比赛」。 */
+model ShopItem {
+  id          BigInt   @id @default(autoincrement())
+  slug        String   @unique @db.VarChar(64)
+  name        String   @db.VarChar(80)
+  description String   @default("") @db.VarChar(500)
+  icon        String   @default("package") @db.VarChar(32)
+  price       Int      @default(100)
+  kind        String   @db.VarChar(16)
+  /** 兑换后发放的资格次数 */
+  grantAmount Int      @default(1) @map("grant_amount")
+  /** -1 表示不限量 */
+  stock       Int      @default(-1)
+  /** 0 表示每人不限购 */
+  maxPerUser  Int      @default(0) @map("max_per_user")
+  active      Boolean  @default(true)
+  sort        Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  orders ShopOrder[]
+
+  @@index([active, sort])
+  @@map("shop_items")
+}
+
+model ShopOrder {
+  id        BigInt   @id @default(autoincrement())
+  orderNo   String   @unique @map("order_no") @db.VarChar(32)
+  userId    BigInt   @map("user_id")
+  itemId    BigInt?  @map("item_id")
+  itemName  String   @map("item_name") @db.VarChar(80)
+  kind      String   @db.VarChar(16)
+  price     Int      @default(0)
+  status    String   @default("PAID") @db.VarChar(16)
+  note      String   @default("") @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item ShopItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([userId, id])
+  @@map("shop_orders")
+}
+
+/** 兑换出来的资格：total 次，已用 used 次 */
+model Grant {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  kind      String   @db.VarChar(16)
+  total     Int      @default(1)
+  used      Int      @default(0)
+  orderId   BigInt?  @map("order_id")
+  note      String   @default("") @db.VarChar(200)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind])
+  @@map("grants")
 }
 
 model ApiToken {
