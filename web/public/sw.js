@@ -7,7 +7,7 @@
  *   - 接口 / 上传文件：完全不碰，永远走网络
  * 这样既满足安装到主屏的条件，又不会出现「改了代码用户还看到旧页面」。
  */
-const CACHE = 'jnctf-shell-v1';
+const CACHE = 'jnctf-shell-v2';
 const SHELL = ['/', '/manifest.webmanifest', '/favicon.svg', '/icons/icon-192.png'];
 
 self.addEventListener('install', (event) => {
@@ -36,7 +36,7 @@ self.addEventListener('fetch', (event) => {
   // 页面导航：网络优先，断网时用缓存的外壳顶一下
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: 'no-store' })
         .then((response) => {
           const copy = response.clone();
           caches.open(CACHE).then((cache) => cache.put('/', copy)).catch(() => {});
