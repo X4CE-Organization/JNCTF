@@ -66,6 +66,7 @@ function userSummary(user: {
   email?: string | null;
   phone?: string | null;
   points?: number;
+  rating?: number;
   role: string;
   status: string;
   score: number;
@@ -85,6 +86,7 @@ function userSummary(user: {
     status: user.status,
     score: user.score,
     points: user.points ?? 0,
+    rating: user.rating ?? 1500,
     totpEnabled: user.totpEnabled,
     emailVerified: Boolean(user.emailVerified),
     phoneVerified: Boolean(user.phoneVerified),

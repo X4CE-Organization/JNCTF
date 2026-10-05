@@ -19,13 +19,13 @@ const scrolled = ref(false);
 const mobileOpen = ref(false);
 
 const NAV = [
-  { to: '/moments', label: '动态' },
   { to: '/challenges', label: '题目' },
   { to: '/competitions', label: '比赛' },
+  { to: '/teams', label: '团队' },
+  { to: '/moments', label: '动态' },
   { to: '/discussions', label: '讨论' },
   { to: '/articles', label: '文章' },
   { to: '/shop', label: '商店' },
-  { to: '/teams', label: '团队' },
   { to: '/scoreboard', label: '榜单' },
   { to: '/submissions', label: '提交' },
 ];
@@ -183,7 +183,7 @@ function toggleTheme() {
                         </n-avatar>
                         <span class="user-meta">
                           <span class="user-name">{{ auth.user?.displayName }}</span>
-                          <span class="user-score">等级分 {{ auth.user?.score }} · 积分 {{ auth.user?.points }}</span>
+                          <span class="user-score">总分 {{ auth.user?.score }} · 积分 {{ auth.user?.points }} · 等级分 {{ auth.user?.rating }}</span>
                         </span>
                       </button>
                     </n-dropdown>

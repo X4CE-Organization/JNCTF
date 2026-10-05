@@ -381,7 +381,9 @@ userRouter.get(
       // score 是等级分（榜单用），points 是积分（商店用），两个都返回
       score: user.score,
       points: user.points,
+      rating: user.rating,
       pointsRank: (await prisma.user.count({ where: { points: { gt: user.points }, hidden: false } })) + 1,
+      ratingRank: (await prisma.user.count({ where: { rating: { gt: user.rating }, hidden: false } })) + 1,
       globalRank: rank,
       solveCount: user._count.solves,
       submitCount: user._count.submissions,

@@ -6,6 +6,7 @@ import { api, query } from '../api';
 import StatBarChart from '../components/StatBarChart.vue';
 
 const type = ref<'user' | 'team'>('user');
+const sortBy = ref<'score' | 'points' | 'rating' | 'solved'>('score');
 const loading = ref(false);
 const items = ref<any[]>([]);
 const breakdown = ref<any[]>([]);
@@ -21,14 +22,16 @@ const categoryTotal = computed(() => breakdown.value.reduce((sum, c) => sum + (c
 async function load() {
   loading.value = true;
   try {
-    const data = await api.get<any>(`/api/scoreboard${query({ type: type.value, limit: 200 })}`);
+    const data = await api.get<any>(
+      `/api/scoreboard${query({ type: type.value, limit: 200, sort: type.value === 'team' ? 'score' : sortBy.value })}`,
+    );
     items.value = data.items ?? [];
   } finally {
     loading.value = false;
   }
 }
 
-watch(type, load);
+watch([type, sortBy], load);
 onMounted(async () => {
   await load();
   breakdown.value = await api
@@ -47,6 +50,12 @@ onMounted(async () => {
         <p>共 {{ items.length }} 位{{ type === 'user' ? '选手' : '队伍' }}，同分按最后解出时间排序</p>
       </div>
       <div class="jk-head-actions">
+        <div v-if="type === 'user'" class="seg">
+          <button :class="sortBy === 'score' ? 'on' : ''" @click="sortBy = 'score'">按总分</button>
+          <button :class="sortBy === 'rating' ? 'on' : ''" @click="sortBy = 'rating'">按等级分</button>
+          <button :class="sortBy === 'points' ? 'on' : ''" @click="sortBy = 'points'">按积分</button>
+          <button :class="sortBy === 'solved' ? 'on' : ''" @click="sortBy = 'solved'">按解题数</button>
+        </div>
         <div class="seg">
           <button :class="type === 'user' ? 'on' : ''" @click="type = 'user'">个人榜</button>
           <button :class="type === 'team' ? 'on' : ''" @click="type = 'team'">团队榜</button>
@@ -76,7 +85,10 @@ onMounted(async () => {
                   {{ entry.name }}
                 </RouterLink>
               </div>
-              <div class="jk-podium-score">{{ entry.score }} 等级分 · {{ entry.solveCount }} 题</div>
+              <div class="jk-podium-score">
+                总分 {{ entry.score }}<template v-if="type === 'user'"> · 等级分 {{ entry.rating }} · 积分 {{ entry.points }}</template>
+                · {{ entry.solveCount }} 题
+              </div>
             </div>
           </div>
         </div>
@@ -87,7 +99,11 @@ onMounted(async () => {
               <tr>
                 <th style="width: 80px">名次</th>
                 <th>{{ type === 'user' ? '选手' : '队伍' }}</th>
-                <th style="width: 110px">等级分</th>
+                <th style="width: 100px">总分</th>
+                <template v-if="type === 'user'">
+                  <th style="width: 100px">等级分</th>
+                  <th style="width: 90px">积分</th>
+                </template>
                 <th style="width: 100px">解题数</th>
                 <th style="width: 190px">最后解出</th>
               </tr>
@@ -107,6 +123,10 @@ onMounted(async () => {
                   </div>
                 </td>
                 <td style="font-weight: 700; color: var(--jk-primary)">{{ entry.score }}</td>
+                <template v-if="type === 'user'">
+                  <td class="mono" style="color: var(--jk-amber)">{{ entry.rating }}</td>
+                  <td class="mono" style="color: var(--jk-accent)">{{ entry.points }}</td>
+                </template>
                 <td>{{ entry.solveCount }}</td>
                 <td style="color: var(--jk-muted); font-size: 13px">
                   {{ entry.lastSolveAt ? new Date(entry.lastSolveAt).toLocaleString() : '—' }}

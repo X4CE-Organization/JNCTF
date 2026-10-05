@@ -5,7 +5,12 @@ export interface ScoreboardEntry {
   id: bigint;
   name: string;
   avatar: string;
+  /** 总分：解出题目累加的分值，榜单排名默认按它 */
   score: number;
+  /** 积分：商店货币，做一题 +1 */
+  points: number;
+  /** 等级分：初始 1500，只在比赛结算时变动 */
+  rating: number;
   solveCount: number;
   lastSolveAt: number | null;
   rank: number;
@@ -23,6 +28,8 @@ export interface ScoreboardOptions {
   freezeAt?: Date | null;
   limit?: number;
   includeHidden?: boolean;
+  /** 排序字段：score（默认）/ points / rating / solved */
+  sortBy?: 'score' | 'points' | 'rating' | 'solved';
 }
 
 /**
@@ -64,6 +71,8 @@ export async function buildScoreboard(options: ScoreboardOptions = {}): Promise<
         name: solve.user.displayName || solve.user.username,
         avatar: solve.user.avatar ?? '',
         score: 0,
+        points: 0,
+        rating: 1500,
         solveCount: 0,
         lastSolveAt: null,
         rank: 0,
@@ -81,7 +90,25 @@ export async function buildScoreboard(options: ScoreboardOptions = {}): Promise<
     if (catName) entry.byCategory[catName] = (entry.byCategory[catName] ?? 0) + 1;
   }
 
-  return assignRanks([...buckets.values()]).slice(0, limit);
+  // 积分和等级分不进解题记录，单独从用户表取一次补上
+  if (buckets.size) {
+    const users = await prisma.user.findMany({
+      where: { id: { in: [...buckets.keys()].map((key) => BigInt(key)) } },
+      select: { id: true, points: true, rating: true },
+    });
+    for (const user of users) {
+      const entry = buckets.get(String(user.id));
+      if (entry) {
+        entry.points = user.points;
+        entry.rating = user.rating;
+      }
+    }
+  }
+
+  const sortBy = options.sortBy ?? 'score';
+  const value = (entry: ScoreboardEntry) =>
+    sortBy === 'points' ? entry.points : sortBy === 'rating' ? entry.rating : sortBy === 'solved' ? entry.solveCount : entry.score;
+  return assignRanks([...buckets.values()], value).slice(0, limit);
 }
 
 /** 团队榜：把队员的解题合并到队伍头上 */
@@ -123,6 +150,9 @@ export async function buildTeamScoreboard(options: ScoreboardOptions = {}): Prom
         name: team.name,
         avatar: team.avatar ?? '',
         score: 0,
+        // 队伍不单独记积分和等级分，榜单里只按总分排
+        points: 0,
+        rating: 0,
         solveCount: 0,
         lastSolveAt: null,
         rank: 0,
@@ -154,5 +184,52 @@ export async function freezeCompetitionScore(competitionId: bigint): Promise<num
     });
     updated += result.count;
   }
+  await applyRatingChanges(competitionId, entries);
   return updated;
+}
+
+/** 榜单名次 → 等级分增减。参考常见 Elo 梯度：人数越多头名加得越多 */
+export function ratingDelta(rank: number, total: number): number {
+  if (total <= 1) return 5;
+  const percentile = rank / total; // 0 越小越靠前
+  if (percentile <= 0.01) return 60;
+  if (percentile <= 0.05) return 40;
+  if (percentile <= 0.15) return 25;
+  if (percentile <= 0.35) return 10;
+  if (percentile <= 0.6) return 0;
+  if (percentile <= 0.85) return -10;
+  return -20;
+}
+
+/**
+ * 比赛结算时更新每个人的等级分。
+ * 只按名次梯度算，和解题总分、积分互不影响；同一场比赛只结算一次。
+ */
+async function applyRatingChanges(competitionId: bigint, entries: ScoreboardEntry[]): Promise<void> {
+  const competition = await prisma.competition.findUnique({
+    where: { id: competitionId },
+    select: { ratingApplied: true, name: true },
+  });
+  if (!competition || competition.ratingApplied || entries.length === 0) return;
+
+  const total = entries.length;
+  for (const entry of entries) {
+    const delta = ratingDelta(entry.rank, total);
+    if (delta === 0) continue;
+    const user = await prisma.user.findUnique({ where: { id: entry.id }, select: { rating: true } });
+    if (!user) continue;
+    const next = Math.max(0, user.rating + delta);
+    await prisma.user.update({ where: { id: entry.id }, data: { rating: next } });
+    await prisma.pointLog.create({
+      data: {
+        userId: entry.id,
+        delta: 0,
+        balance: 0,
+        reason: `比赛「${competition.name}」第 ${entry.rank} 名，等级分 ${delta > 0 ? '+' : ''}${delta}`,
+        refType: 'competition_rating',
+        refId: competitionId,
+      },
+    });
+  }
+  await prisma.competition.update({ where: { id: competitionId }, data: { ratingApplied: true } });
 }

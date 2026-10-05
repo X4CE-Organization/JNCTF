@@ -9,6 +9,7 @@ export interface SessionUser {
   role: 'USER' | 'ADMIN' | 'SUPER_ADMIN';
   score: number;
   points: number;
+  rating: number;
   totpEnabled: boolean;
   email?: string;
   phone?: string;

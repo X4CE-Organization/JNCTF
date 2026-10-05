@@ -62,13 +62,25 @@ export function compareRanking(a: Rankable, b: Rankable): number {
 }
 
 /** 给一组条目算名次（并列同名次，后面跳号） */
-export function assignRanks<T extends Rankable>(items: T[]): Array<T & { rank: number }> {
-  const sorted = [...items].sort(compareRanking);
-  let lastScore: number | null = null;
+export function assignRanks<T extends Rankable>(
+  items: T[],
+  /** 按哪个字段排名，默认总分。传别的字段时同分仍按最后解出时间、再按 id 排 */
+  valueOf: (item: T) => number = (item) => item.score,
+): Array<T & { rank: number }> {
+  const sorted = [...items].sort((a, b) => {
+    const diff = valueOf(b) - valueOf(a);
+    if (diff !== 0) return diff;
+    const aTime = a.lastSolveAt ?? Number.MAX_SAFE_INTEGER;
+    const bTime = b.lastSolveAt ?? Number.MAX_SAFE_INTEGER;
+    if (aTime !== bTime) return aTime - bTime;
+    return idOf(a.id) - idOf(b.id);
+  });
+  let lastValue: number | null = null;
   let lastRank = 0;
   return sorted.map((item, index) => {
-    const rank = lastScore !== null && item.score === lastScore ? lastRank : index + 1;
-    lastScore = item.score;
+    const value = valueOf(item);
+    const rank = lastValue !== null && value === lastValue ? lastRank : index + 1;
+    lastValue = value;
     lastRank = rank;
     return { ...item, rank };
   });

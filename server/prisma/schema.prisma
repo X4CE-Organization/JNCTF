@@ -45,8 +45,10 @@ model User {
   status         UserStatus @default(ACTIVE)
   score          Int        @default(0)
   // 积分：做一题给一点，可以在商店里换成出题 / 办赛资格。
-  // 与 score（等级分，榜单用）分开，避免花积分把排名花掉。
+  // 与 score（总分，解出题目累加）和 rating（等级分，比赛结算产出）都是独立概念。
   points         Int        @default(0)
+  // 等级分：初始 1500，只在比赛结算时变动，做题不会加也不会扣
+  rating         Int        @default(1500)
   emailVerified  Boolean    @default(false) @map("email_verified")
   phoneVerified  Boolean    @default(false) @map("phone_verified")
   totpSecret     String?    @map("totp_secret") @db.VarChar(64)
@@ -93,6 +95,7 @@ model User {
 
   @@index([score])
   @@index([points])
+  @@index([rating])
   @@map("users")
 }
 
@@ -455,6 +458,8 @@ model Competition {
   awdDefensePenalty  Int              @default(50) @map("awd_defense_penalty")
   awdBaseScore       Int              @default(20) @map("awd_base_score")
   createdBy          BigInt?          @map("created_by")
+  /** 等级分只结算一次，结算过就置 true */
+  ratingApplied      Boolean          @default(false) @map("rating_applied")
   createdAt          DateTime         @default(now()) @map("created_at")
 
   challenges    CompetitionChallenge[]

@@ -13,15 +13,20 @@ scoreboardRouter.get(
     const type = String(req.query.type ?? 'user');
     const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 100));
     const competitionId = req.query.competitionId ? BigInt(String(req.query.competitionId)) : 0n;
+    const sortParam = String(req.query.sort ?? 'score');
+    const sortBy = (['score', 'points', 'rating', 'solved'] as const).includes(sortParam as any)
+      ? (sortParam as 'score' | 'points' | 'rating' | 'solved')
+      : 'score';
 
     const items =
       type === 'team'
         ? await buildTeamScoreboard({ competitionId, limit })
-        : await buildScoreboard({ competitionId, limit });
+        : await buildScoreboard({ competitionId, limit, sortBy });
 
     return ok(res, {
       type,
       competitionId,
+      sort: sortBy,
       generatedAt: new Date().toISOString(),
       items: items.map((entry) => ({
         rank: entry.rank,
@@ -29,6 +34,8 @@ scoreboardRouter.get(
         name: entry.name,
         avatar: entry.avatar,
         score: entry.score,
+        points: entry.points,
+        rating: entry.rating,
         solveCount: entry.solveCount,
         lastSolveAt: entry.lastSolveAt ? new Date(entry.lastSolveAt) : null,
         byCategory: entry.byCategory,

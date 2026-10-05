@@ -128,6 +128,7 @@ adminRouter.get(
         status: u.status,
         score: u.score,
         points: u.points,
+        rating: u.rating,
         banned: u.banned,
         banReason: u.banReason,
         hidden: u.hidden,
@@ -164,11 +165,13 @@ adminRouter.put(
       data.status = body.banned ? 'BANNED' : 'ACTIVE';
       data.banReason = body.banned ? String(body.banReason ?? '').slice(0, 255) : null;
     }
-    // 只有超管能改角色与积分
+    // 只有超管能改角色、总分、积分与等级分
     if (actor.role === 'SUPER_ADMIN') {
       if (typeof body.role === 'string' && ['USER', 'ADMIN', 'SUPER_ADMIN'].includes(body.role)) data.role = body.role;
       if (typeof body.hidden === 'boolean') data.hidden = body.hidden;
       if (Number.isFinite(Number(body.score))) data.score = Number(body.score);
+      if (Number.isFinite(Number(body.points))) data.points = Number(body.points);
+      if (Number.isFinite(Number(body.rating))) data.rating = Number(body.rating);
     }
     await prisma.user.update({ where: { id }, data });
     await audit(req, actor, 'admin.user_update', 'user', id, JSON.stringify(data));
