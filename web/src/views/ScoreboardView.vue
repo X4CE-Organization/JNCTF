@@ -66,6 +66,7 @@ onMounted(async () => {
 
       <template v-else>
         <div class="jk-panel" style="padding: 0; overflow: hidden">
+          <div class="table-scroll">
           <table class="jk-table">
             <thead>
               <tr>
@@ -103,6 +104,7 @@ onMounted(async () => {
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
       </template>
     </n-spin>

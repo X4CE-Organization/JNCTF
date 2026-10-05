@@ -1731,3 +1731,33 @@ body {
     font-size: 18px;
   }
 }
+
+/* 顶栏在窄屏要塞下：主题、私信、通知、头像、菜单一排图标，得收紧 */
+@media (max-width: 420px) {
+  .app-header-inner {
+    gap: 8px;
+    padding: 0 12px;
+  }
+  .header-actions {
+    gap: 5px;
+  }
+  .icon-btn {
+    width: 36px;
+    height: 36px;
+  }
+  .brand-mark {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+/* 小到 320 这种宽度时，站名让位给功能区（logo 还在） */
+@media (max-width: 340px) {
+  .brand-name {
+    display: none;
+  }
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+}
