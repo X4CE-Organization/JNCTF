@@ -59,6 +59,31 @@ export async function buildScoreboard(options: ScoreboardOptions = {}): Promise<
   const categoryName = new Map(categories.map((c) => [String(c.id), c.name]));
 
   const buckets = new Map<string, ScoreboardEntry>();
+
+  // 个人总榜按等级分排，所以没解过题的人也要在榜上（等级分为初始值）
+  const isGlobalUserBoard = competitionId === 0n && !userIds?.length && !freezeAt;
+  if (isGlobalUserBoard) {
+    const users = await prisma.user.findMany({
+      where: includeHidden ? {} : { hidden: false },
+      select: { id: true, username: true, displayName: true, avatar: true, points: true, rating: true },
+    });
+    for (const user of users) {
+      buckets.set(String(user.id), {
+        id: user.id,
+        name: user.displayName || user.username,
+        avatar: user.avatar ?? '',
+        score: 0,
+        points: user.points,
+        rating: user.rating,
+        solveCount: 0,
+        lastSolveAt: null,
+        rank: 0,
+        timeline: [],
+        byCategory: {},
+      });
+    }
+  }
+
   for (const solve of solves) {
     if (!includeHidden && solve.user.hidden) continue;
     const key = String(solve.userId);
