@@ -89,9 +89,22 @@ export function createApp() {
     path.resolve(config.rootDir, 'web/dist'),
   ].find((dir) => fs.existsSync(path.join(dir, 'index.html')));
   if (webDist) {
-    app.use(express.static(webDist));
+    // 带内容哈希的 /assets/ 可以长期缓存；入口 HTML 必须每次校验，
+    // 否则发版后浏览器会继续跑旧的前端。
+    app.use(
+      express.static(webDist, {
+        setHeaders(res, filePath) {
+          if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          } else {
+            res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+          }
+        },
+      }),
+    );
     app.get('*', (req, res, next) => {
       if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) return next();
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
       res.sendFile(path.join(webDist, 'index.html'));
     });
   } else {
