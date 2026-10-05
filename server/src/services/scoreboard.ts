@@ -28,8 +28,6 @@ export interface ScoreboardOptions {
   freezeAt?: Date | null;
   limit?: number;
   includeHidden?: boolean;
-  /** 排序字段：score（默认）/ points / rating / solved */
-  sortBy?: 'score' | 'points' | 'rating' | 'solved';
 }
 
 /**
@@ -105,10 +103,8 @@ export async function buildScoreboard(options: ScoreboardOptions = {}): Promise<
     }
   }
 
-  const sortBy = options.sortBy ?? 'score';
-  const value = (entry: ScoreboardEntry) =>
-    sortBy === 'points' ? entry.points : sortBy === 'rating' ? entry.rating : sortBy === 'solved' ? entry.solveCount : entry.score;
-  return assignRanks([...buckets.values()], value).slice(0, limit);
+  // 个人榜只认等级分；总分和积分都不参与排名
+  return assignRanks([...buckets.values()], (entry) => entry.rating).slice(0, limit);
 }
 
 /** 团队榜：把队员的解题合并到队伍头上 */

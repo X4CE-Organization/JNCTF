@@ -63,9 +63,9 @@ adminRouter.get(
     const recentActions = await prisma.auditLog.findMany({ orderBy: { id: 'desc' }, take: 15 });
     const topUsers = await prisma.user.findMany({
       where: { hidden: false },
-      orderBy: { score: 'desc' },
+      orderBy: { rating: 'desc' },
       take: 5,
-      select: { id: true, username: true, displayName: true, avatar: true, score: true },
+      select: { id: true, username: true, displayName: true, avatar: true, rating: true },
     });
 
     return ok(res, {
@@ -126,7 +126,6 @@ adminRouter.get(
         avatar: u.avatar,
         role: u.role,
         status: u.status,
-        score: u.score,
         points: u.points,
         rating: u.rating,
         banned: u.banned,
@@ -165,11 +164,10 @@ adminRouter.put(
       data.status = body.banned ? 'BANNED' : 'ACTIVE';
       data.banReason = body.banned ? String(body.banReason ?? '').slice(0, 255) : null;
     }
-    // 只有超管能改角色、总分、积分与等级分
+    // 只有超管能改角色、积分与等级分
     if (actor.role === 'SUPER_ADMIN') {
       if (typeof body.role === 'string' && ['USER', 'ADMIN', 'SUPER_ADMIN'].includes(body.role)) data.role = body.role;
       if (typeof body.hidden === 'boolean') data.hidden = body.hidden;
-      if (Number.isFinite(Number(body.score))) data.score = Number(body.score);
       if (Number.isFinite(Number(body.points))) data.points = Number(body.points);
       if (Number.isFinite(Number(body.rating))) data.rating = Number(body.rating);
     }

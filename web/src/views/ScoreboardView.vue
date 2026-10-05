@@ -6,7 +6,6 @@ import { api, query } from '../api';
 import StatBarChart from '../components/StatBarChart.vue';
 
 const type = ref<'user' | 'team'>('user');
-const sortBy = ref<'score' | 'points' | 'rating' | 'solved'>('score');
 const loading = ref(false);
 const items = ref<any[]>([]);
 const breakdown = ref<any[]>([]);
@@ -22,16 +21,14 @@ const categoryTotal = computed(() => breakdown.value.reduce((sum, c) => sum + (c
 async function load() {
   loading.value = true;
   try {
-    const data = await api.get<any>(
-      `/api/scoreboard${query({ type: type.value, limit: 200, sort: type.value === 'team' ? 'score' : sortBy.value })}`,
-    );
+    const data = await api.get<any>(`/api/scoreboard${query({ type: type.value, limit: 200 })}`);
     items.value = data.items ?? [];
   } finally {
     loading.value = false;
   }
 }
 
-watch([type, sortBy], load);
+watch(type, load);
 onMounted(async () => {
   await load();
   breakdown.value = await api
@@ -47,15 +44,11 @@ onMounted(async () => {
       <span class="jk-head-icon">#</span>
       <div>
         <h1>排行榜</h1>
-        <p>共 {{ items.length }} 位{{ type === 'user' ? '选手' : '队伍' }}，同分按最后解出时间排序</p>
+        <p>
+          共 {{ items.length }} 位{{ type === 'user' ? '选手' : '队伍' }}<template v-if="type === 'user'">，按等级分排名，同分按最后解出时间</template>
+        </p>
       </div>
       <div class="jk-head-actions">
-        <div v-if="type === 'user'" class="seg">
-          <button :class="sortBy === 'score' ? 'on' : ''" @click="sortBy = 'score'">按总分</button>
-          <button :class="sortBy === 'rating' ? 'on' : ''" @click="sortBy = 'rating'">按等级分</button>
-          <button :class="sortBy === 'points' ? 'on' : ''" @click="sortBy = 'points'">按积分</button>
-          <button :class="sortBy === 'solved' ? 'on' : ''" @click="sortBy = 'solved'">按解题数</button>
-        </div>
         <div class="seg">
           <button :class="type === 'user' ? 'on' : ''" @click="type = 'user'">个人榜</button>
           <button :class="type === 'team' ? 'on' : ''" @click="type = 'team'">团队榜</button>
@@ -86,8 +79,7 @@ onMounted(async () => {
                 </RouterLink>
               </div>
               <div class="jk-podium-score">
-                总分 {{ entry.score }}<template v-if="type === 'user'"> · 等级分 {{ entry.rating }} · 积分 {{ entry.points }}</template>
-                · {{ entry.solveCount }} 题
+                <template v-if="type === 'user'">等级分 {{ entry.rating }} · </template>{{ entry.solveCount }} 题
               </div>
             </div>
           </div>
@@ -99,11 +91,8 @@ onMounted(async () => {
               <tr>
                 <th style="width: 80px">名次</th>
                 <th>{{ type === 'user' ? '选手' : '队伍' }}</th>
-                <th style="width: 100px">总分</th>
-                <template v-if="type === 'user'">
-                  <th style="width: 100px">等级分</th>
-                  <th style="width: 90px">积分</th>
-                </template>
+                <th v-if="type === 'user'" style="width: 110px">等级分</th>
+                <th v-else style="width: 110px">总分</th>
                 <th style="width: 100px">解题数</th>
                 <th style="width: 190px">最后解出</th>
               </tr>
@@ -122,11 +111,9 @@ onMounted(async () => {
                     </RouterLink>
                   </div>
                 </td>
-                <td style="font-weight: 700; color: var(--jk-primary)">{{ entry.score }}</td>
-                <template v-if="type === 'user'">
-                  <td class="mono" style="color: var(--jk-amber)">{{ entry.rating }}</td>
-                  <td class="mono" style="color: var(--jk-accent)">{{ entry.points }}</td>
-                </template>
+                <td style="font-weight: 700; color: var(--jk-primary)">
+                  {{ type === 'user' ? entry.rating : entry.score }}
+                </td>
                 <td>{{ entry.solveCount }}</td>
                 <td style="color: var(--jk-muted); font-size: 13px">
                   {{ entry.lastSolveAt ? new Date(entry.lastSolveAt).toLocaleString() : '—' }}

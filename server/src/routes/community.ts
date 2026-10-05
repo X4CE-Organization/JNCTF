@@ -367,7 +367,8 @@ userRouter.get(
       orderBy: { createdAt: 'desc' },
       take: 30,
     });
-    const rank = (await prisma.user.count({ where: { score: { gt: user.score }, hidden: false } })) + 1;
+    // 排名只看等级分
+    const rank = (await prisma.user.count({ where: { rating: { gt: user.rating }, hidden: false } })) + 1;
     const momentCount = await prisma.moment.count({ where: { userId: user.id, hidden: false } });
     return ok(res, {
       id: user.id,
@@ -378,8 +379,7 @@ userRouter.get(
       website: user.website ?? '',
       country: user.country ?? '',
       organization: user.organization ?? '',
-      // score 是等级分（榜单用），points 是积分（商店用），两个都返回
-      score: user.score,
+      // 等级分用于排名，积分只用于商店消费
       points: user.points,
       rating: user.rating,
       pointsRank: (await prisma.user.count({ where: { points: { gt: user.points }, hidden: false } })) + 1,

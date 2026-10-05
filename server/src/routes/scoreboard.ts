@@ -13,28 +13,24 @@ scoreboardRouter.get(
     const type = String(req.query.type ?? 'user');
     const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 100));
     const competitionId = req.query.competitionId ? BigInt(String(req.query.competitionId)) : 0n;
-    const sortParam = String(req.query.sort ?? 'score');
-    const sortBy = (['score', 'points', 'rating', 'solved'] as const).includes(sortParam as any)
-      ? (sortParam as 'score' | 'points' | 'rating' | 'solved')
-      : 'score';
 
     const items =
       type === 'team'
+        // 队伍没有等级分，团队榜仍按比赛总分排
         ? await buildTeamScoreboard({ competitionId, limit })
-        : await buildScoreboard({ competitionId, limit, sortBy });
+        // 个人榜固定按等级分排名，不提供其它排序方式
+        : await buildScoreboard({ competitionId, limit });
 
     return ok(res, {
       type,
       competitionId,
-      sort: sortBy,
+      sort: type === 'team' ? 'score' : 'rating',
       generatedAt: new Date().toISOString(),
       items: items.map((entry) => ({
         rank: entry.rank,
         id: entry.id,
         name: entry.name,
         avatar: entry.avatar,
-        score: entry.score,
-        points: entry.points,
         rating: entry.rating,
         solveCount: entry.solveCount,
         lastSolveAt: entry.lastSolveAt ? new Date(entry.lastSolveAt) : null,

@@ -50,9 +50,8 @@ onMounted(load);
           </RouterLink>
         </div>
         <n-descriptions class="mt-4" :column="1" size="small" label-placement="left">
-          <n-descriptions-item label="总分">{{ profile.score }}</n-descriptions-item>
-          <n-descriptions-item label="积分">{{ profile.points }}</n-descriptions-item>
           <n-descriptions-item label="等级分">{{ profile.rating }}</n-descriptions-item>
+          <n-descriptions-item label="积分">{{ profile.points }}</n-descriptions-item>
           <n-descriptions-item label="排名">#{{ profile.globalRank }}</n-descriptions-item>
           <n-descriptions-item label="解题">{{ profile.solveCount }}</n-descriptions-item>
           <n-descriptions-item label="动态">{{ profile.momentCount ?? 0 }}</n-descriptions-item>

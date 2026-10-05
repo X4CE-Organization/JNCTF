@@ -183,7 +183,7 @@ function toggleTheme() {
                         </n-avatar>
                         <span class="user-meta">
                           <span class="user-name">{{ auth.user?.displayName }}</span>
-                          <span class="user-score">总分 {{ auth.user?.score }} · 积分 {{ auth.user?.points }} · 等级分 {{ auth.user?.rating }}</span>
+                          <span class="user-score">等级分 {{ auth.user?.rating }} · 积分 {{ auth.user?.points }}</span>
                         </span>
                       </button>
                     </n-dropdown>
