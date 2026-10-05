@@ -51,7 +51,7 @@ onMounted(load);
       </n-space>
     </n-card>
     <n-card size="small">
-      <n-data-table :columns="columns" :data="items" :bordered="false" size="small" :row-key="(r: any) => r.id" />
+      <n-data-table :scroll-x="900" :columns="columns" :data="items" :bordered="false" size="small" :row-key="(r: any) => r.id" />
       <div class="mt-3 space-y-1">
         <n-button v-for="row in items" :key="row.id" size="tiny" class="mr-2" @click="open(row)">处理 #{{ row.id }} {{ row.subject }}</n-button>
       </div>

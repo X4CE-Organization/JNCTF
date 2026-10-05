@@ -90,6 +90,7 @@ onMounted(load);
           <n-button size="small" type="primary" @click="create">新建商品</n-button>
         </div>
       </div>
+      <div class="table-scroll">
       <table class="jk-table">
         <thead>
           <tr>
@@ -119,10 +120,12 @@ onMounted(load);
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <div class="jk-panel">
       <div class="jk-section"><h2>兑换记录</h2><span class="count">最近 {{ orders.length }} 条</span></div>
+      <div class="table-scroll">
       <table class="jk-table">
         <thead>
           <tr>
@@ -143,6 +146,7 @@ onMounted(load);
           </tr>
         </tbody>
       </table>
+      </div>
       <p v-if="!orders.length" style="font-size: 13px; color: var(--jk-muted)">还没有兑换记录</p>
     </div>
 

@@ -1383,6 +1383,17 @@ body {
   margin-top: 16px;
 }
 
+/* 宽表格在窄屏横向滚动，而不是把整个页面撑破 */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll .jk-table {
+  min-width: 560px;
+}
+
 /* --------------------------------------------------------------- 公告页 */
 
 .ann-head {
@@ -1490,7 +1501,15 @@ body {
     display: grid;
   }
   .mobile-nav {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 10px 14px 14px;
+  }
+  .mobile-nav-item {
+    padding: 12px 6px;
+    text-align: center;
+    font-size: 13.5px;
   }
   .jk-podium {
     grid-template-columns: 1fr;
@@ -1523,5 +1542,192 @@ body {
   }
   .setting-label {
     gap: 1px;
+  }
+}
+
+/* -------------------------------------------------------- 手机端（<=720px） */
+
+@media (max-width: 720px) {
+  :root {
+    --jk-header-h: 56px;
+    --jk-radius: 10px;
+  }
+
+  /* 刘海屏：给顶栏和页脚留出安全区 */
+  .app-header {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .app-footer-inner {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-header-inner {
+    gap: 10px;
+    padding: 0 14px;
+  }
+  .brand-name {
+    font-size: 14px;
+  }
+
+  /* 手指友好的触摸目标 */
+  .icon-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+  .user-chip {
+    padding: 4px;
+  }
+  .ghost-link,
+  .cta-link {
+    padding: 9px 14px;
+  }
+  .jk-mini-btn,
+  .code-btn,
+  .dm-action,
+  .moment-action {
+    min-height: 32px;
+  }
+
+  .app-main {
+    padding: 16px 14px 40px;
+  }
+
+  /* 页面头：标题和右侧操作改为上下排 */
+  .jk-head {
+    padding: 14px;
+    gap: 10px 12px;
+    flex-wrap: wrap;
+  }
+  .jk-head h1 {
+    font-size: 16px;
+  }
+  .jk-head p {
+    font-size: 12px;
+  }
+  .jk-head-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+  .jk-head-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 15px;
+  }
+
+  .jk-panel {
+    padding: 14px;
+  }
+  .jk-section h2 {
+    font-size: 14.5px;
+  }
+
+  /* 筛选条、分段控件：竖着排满整行，别挤成一条 */
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .filter-bar > * {
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+  .seg {
+    display: flex;
+    width: 100%;
+  }
+  .seg button {
+    flex: 1;
+    padding: 8px 6px;
+    font-size: 12.5px;
+  }
+
+  /* iOS 会因输入框字号小于 16px 而自动放大页面 */
+  input,
+  textarea,
+  select,
+  .n-input__input-el,
+  .n-input__textarea-el {
+    font-size: 16px !important;
+  }
+
+  /* 网格类内容一律单列 */
+  .home-grid,
+  .article-grid,
+  .shop-grid,
+  .create-grid,
+  .quota-row,
+  .detail-grid,
+  .dm-layout,
+  .settings-layout,
+  .profile-page > .grid {
+    grid-template-columns: 1fr !important;
+  }
+  .moment-images {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* 私信：会话列表压到聊天窗口上面 */
+  .dm-side {
+    max-height: 240px;
+  }
+  .dm-thread {
+    max-height: 54vh;
+  }
+  .dm-bubble {
+    max-width: 88%;
+  }
+  .dm-compose {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* 文章详情、动图等宽内容不撑破屏幕 */
+  .markdown-body img,
+  .article-banner {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* 后台：横向标签在窄屏铺两行 */
+  .admin-tabs {
+    gap: 0;
+  }
+  .admin-tab {
+    padding: 7px 10px;
+    font-size: 12.5px;
+  }
+  .settings-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 4px;
+  }
+  .settings-nav-item {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  /* 弹窗在手机上留边距 */
+  .n-modal {
+    max-width: calc(100vw - 24px) !important;
+  }
+  .n-card-header__main,
+  .n-modal .n-card-header__main {
+    font-size: 15px;
+  }
+}
+
+/* ------------------------------------------------------ 超窄屏（<=380px） */
+
+@media (max-width: 380px) {
+  .mobile-nav {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .app-main {
+    padding: 14px 12px 36px;
+  }
+  .jk-stat-value {
+    font-size: 18px;
   }
 }

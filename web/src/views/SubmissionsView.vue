@@ -126,6 +126,7 @@ onMounted(async () => {
           </n-button>
         </div>
 
+        <div class="table-scroll">
         <table class="jk-table">
           <thead>
             <tr>
@@ -156,6 +157,7 @@ onMounted(async () => {
             </tr>
           </tbody>
         </table>
+        </div>
 
         <div v-if="!items.length" class="jk-empty">
           <div class="jk-empty-icon">∅</div>

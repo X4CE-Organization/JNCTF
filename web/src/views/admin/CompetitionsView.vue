@@ -93,7 +93,7 @@ onMounted(load);
   <div class="space-y-3">
     <n-card size="small"><n-space><n-button type="primary" @click="create">新建比赛</n-button><n-button @click="load">刷新</n-button></n-space></n-card>
     <n-card size="small">
-      <n-data-table :columns="columns" :data="items" :loading="loading" :bordered="false" size="small" :row-key="(r: any) => r.id">
+      <n-data-table :scroll-x="900" :columns="columns" :data="items" :loading="loading" :bordered="false" size="small" :row-key="(r: any) => r.id">
         <template #empty>暂无比赛</template>
       </n-data-table>
       <div class="mt-3 space-y-1">

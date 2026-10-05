@@ -81,7 +81,7 @@ onMounted(load);
       </n-space>
     </n-card>
     <n-card size="small">
-      <n-data-table :columns="columns" :data="items" :loading="loading" :bordered="false" size="small" :row-key="(r: any) => r.id" />
+      <n-data-table :scroll-x="900" :columns="columns" :data="items" :loading="loading" :bordered="false" size="small" :row-key="(r: any) => r.id" />
       <div class="mt-3 space-y-1">
         <div v-for="row in items" :key="row.id" class="text-xs">
           <n-button size="tiny" @click="edit(row)">编辑 {{ row.name }}</n-button>

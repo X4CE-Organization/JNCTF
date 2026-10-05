@@ -87,7 +87,7 @@ onMounted(load);
     </n-card>
 
     <n-card size="small">
-      <n-data-table :columns="columns" :data="items" :loading="loading" :bordered="false" size="small" :row-key="(r: any) => r.id">
+      <n-data-table :scroll-x="900" :columns="columns" :data="items" :loading="loading" :bordered="false" size="small" :row-key="(r: any) => r.id">
         <template #empty>暂无数据</template>
       </n-data-table>
       <n-space justify="center" class="mt-3">

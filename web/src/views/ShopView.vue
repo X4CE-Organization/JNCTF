@@ -164,6 +164,7 @@ onMounted(load);
 
       <section v-if="auth.isLogin && orders.length" class="jk-panel">
         <div class="jk-section"><h2>兑换记录</h2><span class="count">{{ orders.length }}</span></div>
+        <div class="table-scroll">
         <table class="jk-table">
           <thead>
             <tr>
@@ -182,6 +183,7 @@ onMounted(load);
             </tr>
           </tbody>
         </table>
+        </div>
       </section>
     </div>
   </n-spin>

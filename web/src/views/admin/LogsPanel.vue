@@ -50,10 +50,10 @@ onMounted(loadLogs);
     <n-tabs type="line" animated>
       <n-tab-pane name="audit" tab="操作日志">
         <n-space class="mb-3"><n-input v-model:value="keyword" placeholder="搜索动作或操作者" style="width: 240px" @keyup.enter="loadLogs" /><n-button @click="loadLogs">查询</n-button></n-space>
-        <n-data-table :columns="logColumns" :data="logs" :loading="loading" :bordered="false" size="small" :row-key="(r: any) => r.id" />
+        <n-data-table :scroll-x="900" :columns="logColumns" :data="logs" :loading="loading" :bordered="false" size="small" :row-key="(r: any) => r.id" />
       </n-tab-pane>
       <n-tab-pane name="login" tab="登录日志">
-        <n-data-table :columns="loginColumns" :data="loginLogs" :bordered="false" size="small" :row-key="(r: any) => r.id" />
+        <n-data-table :scroll-x="900" :columns="loginColumns" :data="loginLogs" :bordered="false" size="small" :row-key="(r: any) => r.id" />
       </n-tab-pane>
       <n-tab-pane name="system" tab="运行状态">
         <n-descriptions v-if="system" :column="2" bordered size="small">

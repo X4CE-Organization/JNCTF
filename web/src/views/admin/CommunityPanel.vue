@@ -101,6 +101,7 @@ onMounted(load);
     <!-- 讨论 -->
     <div v-else-if="tab === 'discussions'" class="jk-panel">
       <div class="jk-section"><h2>讨论管理</h2><span class="count">{{ discussions.length }}</span></div>
+      <div class="table-scroll">
       <table class="jk-table">
         <thead>
           <tr>
@@ -131,6 +132,7 @@ onMounted(load);
           </tr>
         </tbody>
       </table>
+      </div>
       <p v-if="!discussions.length" style="font-size: 13px; color: var(--jk-muted)">暂无帖子</p>
     </div>
 
@@ -145,6 +147,7 @@ onMounted(load);
           <button class="admin-tab" :class="articleState === 'APPROVED' ? 'is-active' : ''" @click="articleState = 'APPROVED'; loadArticles()">已通过</button>
         </div>
       </div>
+      <div class="table-scroll">
       <table class="jk-table">
         <thead>
           <tr>
@@ -180,6 +183,7 @@ onMounted(load);
           </tr>
         </tbody>
       </table>
+      </div>
       <p v-if="!articles.length" style="font-size: 13px; color: var(--jk-muted)">暂无文章</p>
     </div>
   </div>

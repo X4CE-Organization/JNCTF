@@ -82,7 +82,7 @@ onMounted(load);
       <n-space><n-button type="primary" @click="create">新建题目</n-button><n-button @click="load">刷新</n-button></n-space>
     </n-card>
     <n-card size="small">
-      <n-data-table :columns="columns" :data="items" :loading="loading" :bordered="false" size="small" :row-key="(r: any) => r.id" />
+      <n-data-table :scroll-x="900" :columns="columns" :data="items" :loading="loading" :bordered="false" size="small" :row-key="(r: any) => r.id" />
     </n-card>
     <n-modal v-model:show="editOpen" preset="card" :title="form.id ? '编辑题目' : '新建题目'" style="max-width: 720px">
       <n-form>
